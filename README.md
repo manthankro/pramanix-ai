@@ -1,13 +1,19 @@
-# Pramanix - AI Engineering Mentor & Student Project Workspace
+<div align="center">
+  <img src="public/logo.svg" alt="Pramanix AI Logo" width="128" height="128" />
+  <h1>Pramanix AI</h1>
+  <p><strong>AI Engineering Mentor & Student Project Workspace</strong></p>
 
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue.svg)](https://www.typescriptlang.org/)
-[![React](https://img.shields.io/badge/React-18-61dafb.svg)](https://reactjs.org/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind-CSS-38bdf8.svg)](https://tailwindcss.com/)
-[![Recharts](https://img.shields.io/badge/Recharts-2.x-22c55e.svg)](https://recharts.org/)
-[![Express](https://img.shields.io/badge/Express-4.x-gray.svg)](https://expressjs.com/)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+  [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue.svg)](https://www.typescriptlang.org/)
+  [![React](https://img.shields.io/badge/React-18-61dafb.svg)](https://reactjs.org/)
+  [![Tailwind CSS](https://img.shields.io/badge/Tailwind-CSS-38bdf8.svg)](https://tailwindcss.com/)
+  [![Recharts](https://img.shields.io/badge/Recharts-2.x-22c55e.svg)](https://recharts.org/)
+  [![Express](https://img.shields.io/badge/Express-4.x-gray.svg)](https://expressjs.com/)
+  [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+</div>
 
-**Pramanix** is a full-stack engineering mentor, GitHub repository analyzer, viva simulator, and technical capstone project workspace. Designed for engineering students, computer science researchers, and developers, Pramanix bridges the gap between theoretical computer science coursework and production-ready software engineering.
+<br />
+
+**Pramanix AI** is a comprehensive engineering mentor, GitHub repository analyzer, viva simulator, and technical capstone project workspace. Designed for engineering students, computer science researchers, and developers, Pramanix bridges the gap between theoretical computer science coursework and production-ready software engineering.
 
 ---
 

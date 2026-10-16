@@ -14,6 +14,7 @@ import {
   FolderGit2,
 } from "lucide-react";
 import { ModuleId } from "../types";
+import { PramanixLogo } from "./common/PramanixLogo";
 
 interface SidebarProps {
   currentModule: ModuleId;
@@ -94,21 +95,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   return (
     <aside className="w-72 bg-zinc-950 border-r border-zinc-800 flex flex-col h-screen select-none shrink-0 text-zinc-300">
       {/* Brand Header */}
-      <div className="p-4 border-b border-zinc-800 flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold text-base shadow-sm">
-            P
-          </div>
-          <div>
-            <div className="font-semibold text-zinc-100 text-sm tracking-tight flex items-center gap-1.5">
-              Pramanix
-              <span className="text-[10px] uppercase font-mono tracking-wider text-emerald-400 font-normal">
-                v2.6
-              </span>
-            </div>
-            <p className="text-[11px] text-zinc-400">Engineering Mentor & Hub</p>
-          </div>
-        </div>
+      <div className="p-3.5 border-b border-zinc-800 flex items-center justify-between">
+        <PramanixLogo size="sm" showSubtitle={true} showVersion={true} version="v2.6" />
       </div>
 
       {/* Target Repository Quick Card */}

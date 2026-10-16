@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#090d16" />
+      <stop offset="50%" stop-color="#0d1527" />
+      <stop offset="100%" stop-color="#040711" />
+    </linearGradient>
+
+    <!-- Border Ring Gradient -->
+    <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10b981" stop-opacity="0.8" />
+      <stop offset="40%" stop-color="#06b6d4" stop-opacity="0.9" />
+      <stop offset="80%" stop-color="#3b82f6" stop-opacity="0.7" />
+      <stop offset="100%" stop-color="#8b5cf6" stop-opacity="0.5" />
+    </linearGradient>
+
+    <!-- P Stem Gradient -->
+    <linearGradient id="pStemGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#34d399" />
+      <stop offset="45%" stop-color="#10b981" />
+      <stop offset="100%" stop-color="#059669" />
+    </linearGradient>
+
+    <!-- P Loop Primary Gradient -->
+    <linearGradient id="pLoopGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#22d3ee" />
+      <stop offset="50%" stop-color="#06b6d4" />
+      <stop offset="100%" stop-color="#2563eb" />
+    </linearGradient>
+
+    <!-- Dynamic AI Accent Ribbon -->
+    <linearGradient id="pAccentGrad" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#a7f3d0" />
+      <stop offset="50%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#818cf8" />
+    </linearGradient>
+
+    <!-- Glow Filter -->
+    <filter id="neonGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+
+    <filter id="subtleGlow" x="-10%" y="-10%" width="120%" height="120%">
+      <feGaussianBlur stdDeviation="3" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Squircle Base Container -->
+  <rect x="8" y="8" width="184" height="184" rx="46" fill="url(#bgGrad)" stroke="url(#ringGrad)" stroke-width="2.5" />
+
+  <!-- Background Ambient Cyber Glow -->
+  <circle cx="100" cy="95" r="45" fill="#06b6d4" opacity="0.12" filter="url(#neonGlow)" />
+  <circle cx="85" cy="115" r="35" fill="#10b981" opacity="0.15" filter="url(#neonGlow)" />
+
+  <!-- Neural Connection Nodes / Constellation Accents -->
+  <g opacity="0.4" stroke="#38bdf8" stroke-width="1" stroke-dasharray="2,2">
+    <line x1="48" y1="52" x2="68" y2="70" />
+    <line x1="145" y1="55" x2="130" y2="72" />
+    <line x1="152" y1="125" x2="135" y2="135" />
+  </g>
+  <circle cx="48" cy="52" r="2.5" fill="#34d399" opacity="0.7" />
+  <circle cx="145" cy="55" r="2.5" fill="#38bdf8" opacity="0.7" />
+  <circle cx="152" cy="125" r="2.5" fill="#818cf8" opacity="0.6" />
+
+  <!-- The Stylized Pramanix "P" Monogram -->
+  <g filter="url(#subtleGlow)">
+    <!-- Vertical Pillar / Engineering Stem -->
+    <path d="M60 48 C60 44 64 42 68 44 L80 50 C83 51.5 85 54.5 85 58 L85 146 C85 151 80 155 75 153 L66 148 C62.5 146 60 142.5 60 138.5 Z" fill="url(#pStemGrad)" />
+
+    <!-- Upper Connecting Bridge -->
+    <path d="M84 46 L124 46 C145 46 158 58 158 78 C158 97 144 110 122 110 L84 110 Z" fill="none" stroke="url(#pLoopGrad)" stroke-width="18" stroke-linecap="round" stroke-linejoin="round" />
+
+    <!-- Inner Core Cyber Loop -->
+    <path d="M85 62 L120 62 C131 62 140 70 140 80 C140 90 131 96 120 96 L85 96 Z" fill="#0b1220" opacity="0.9" />
+
+    <!-- High-Velocity Forward AI Crest / Chevron Wing -->
+    <path d="M96 78 L122 78 C130 78 136 73 136 66 C136 59 130 55 121 55 L96 55 Z" fill="url(#pAccentGrad)" opacity="0.95" />
+
+    <!-- Dynamic AI Spark Dot / Core Node -->
+    <circle cx="118" cy="78" r="4" fill="#ffffff" filter="url(#neonGlow)" />
+    <circle cx="118" cy="78" r="2" fill="#a7f3d0" />
+
+    <!-- Diagonal Engineering Facet Accent (SRS / Verification Checkmark nuance) -->
+    <path d="M68 116 L98 86 L108 96 L76 128 Z" fill="#10b981" opacity="0.45" />
+    <path d="M94 110 L146 160 L134 166 L86 118 Z" fill="url(#ringGrad)" opacity="0.25" />
+  </g>
+</svg>
