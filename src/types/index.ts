@@ -50,6 +50,10 @@ export interface ProjectTask {
   description?: string;
   status: "todo" | "in_progress" | "review" | "done";
   priority: "low" | "medium" | "high";
+  startDate?: string;
+  dueDate?: string;
+  progress?: number;
+  milestone?: string;
 }
 
 export interface ProjectFile {

@@ -21,6 +21,7 @@ import { WorkspaceProject, ProjectTask, ProjectFile } from "../../types";
 import { exportWorkspaceZip, exportProjectBundleZip, triggerDownload } from "../../services/zipExport";
 import { getDownloadZipUrl } from "../../services/api";
 import { ProjectProgressDashboard } from "./ProjectProgressDashboard";
+import { ProjectGanttTimeline } from "./ProjectGanttTimeline";
 
 interface ProjectWorkspaceProps {
   projects: WorkspaceProject[];
@@ -41,7 +42,7 @@ export const ProjectWorkspace: React.FC<ProjectWorkspaceProps> = ({
 }) => {
   const currentProject = projects.find((p) => p.id === activeProjectId) || projects[0];
 
-  const [activeTab, setActiveTab] = useState<"kanban" | "dashboard" | "files" | "notes">("kanban");
+  const [activeTab, setActiveTab] = useState<"kanban" | "dashboard" | "gantt" | "files" | "notes">("kanban");
   const [isExportingBundle, setIsExportingBundle] = useState(false);
 
   // New project modal state
@@ -273,6 +274,15 @@ export const ProjectWorkspace: React.FC<ProjectWorkspaceProps> = ({
             <span>Progress Dashboard</span>
           </button>
           <button
+            onClick={() => setActiveTab("gantt")}
+            className={`flex items-center gap-1.5 px-3 py-1 rounded cursor-pointer font-medium transition ${
+              activeTab === "gantt" ? "bg-zinc-800 text-emerald-400 font-semibold" : "text-zinc-400 hover:text-zinc-200"
+            }`}
+          >
+            <Calendar className="w-3.5 h-3.5" />
+            <span>Gantt Timeline</span>
+          </button>
+          <button
             onClick={() => setActiveTab("files")}
             className={`px-3 py-1 rounded cursor-pointer font-medium transition ${
               activeTab === "files" ? "bg-zinc-800 text-zinc-100" : "text-zinc-400 hover:text-zinc-200"
@@ -302,6 +312,15 @@ export const ProjectWorkspace: React.FC<ProjectWorkspaceProps> = ({
             project={currentProject}
             onAddTaskPrompt={() => setActiveTab("kanban")}
             onDownloadBundle={handleDownloadProjectBundle}
+          />
+        )}
+
+        {/* Gantt Timeline View */}
+        {activeTab === "gantt" && (
+          <ProjectGanttTimeline
+            project={currentProject}
+            onUpdateProject={onUpdateProject}
+            onAddTaskPrompt={() => setActiveTab("kanban")}
           />
         )}
 
