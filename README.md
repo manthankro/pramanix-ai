@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="public/logo.svg" alt="Pramanix AI Logo" width="128" height="128" />
+  <img src="public/pramanix-logo.jpeg" alt="Pramanix logo" width="320" />
   <h1>Pramanix AI</h1>
   <p><strong>AI Engineering Mentor & Student Project Workspace</strong></p>
 
