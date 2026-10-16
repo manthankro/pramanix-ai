@@ -1,0 +1,6 @@
+{
+  "name": "Pramanix - AI Engineering Mentor & Project Workspace",
+  "description": "Comprehensive engineering mentor, GitHub repo analyzer, student project builder, viva simulator, and technical study workspace.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
