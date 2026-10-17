@@ -368,19 +368,23 @@ Please format your response into clear Markdown sections:
 
       case "github_diagnose":
         systemInstruction =
-          "You are a lead open-source maintainer and software architect analyzing a GitHub project.";
-        prompt = `Analyze the following GitHub repository metadata and file tree:
-Repo: ${data.repoName}
-Default Branch: ${data.defaultBranch}
-Files list:\n${(data.files || []).slice(0, 100).join("\n")}
-README snippet:\n${(data.readme || "").slice(0, 3000)}
+          "You are a patient project mentor helping a student understand a public GitHub repository. Use plain language, avoid assuming prior knowledge, and clearly say when the README or file list does not provide enough evidence.";
+        prompt = `Create a student-friendly learning guide from this public GitHub repository:
+Repository: ${data.repoName}
+Default branch: ${data.defaultBranch}
+Files:
+${(data.files || []).slice(0, 100).join("\n")}
+README:
+${(data.readme || "").slice(0, 5000)}
 
-Provide:
-1. High-Level Architecture Overview & Purpose
-2. Core Entry Points & Component Relationships
-3. Step-by-Step Installation & Run Guide (based on the exact build tools detected, e.g. pyproject.toml, Dockerfile, package.json)
-4. Code Quality & Architecture Audit (Strengths, Bottlenecks, Modernization recommendations)
-5. 3 Actionable Improvements with suggested code/config modifications referencing specific files.`;
+Use these short sections:
+1. In one sentence: what the project does
+2. How it works: explain the main flow in beginner-friendly terms
+3. What to learn from it: name useful ideas, tools, or skills
+4. Where to start: point to the most useful files or folders from the list
+5. How to try it: give setup steps only when supported by README or file names; do not invent commands
+6. Good next steps for a student: 3 small things to explore or change
+Keep it specific to the supplied README and file list. If details are missing, state what the student should inspect next.`;
         break;
 
       case "code_review":
