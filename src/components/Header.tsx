@@ -46,8 +46,8 @@ const moduleHeadings: Record<ModuleId, { title: string; description: string }> =
     description: "Unified workspace organizing connected repositories, code files, Kanban sprint tasks, notes, and full ZIP packaging.",
   },
   chat: {
-    title: "General AI Engineering Companion",
-    description: "Context-aware conversational assistance for engineering questions, code explanations, and academic writing.",
+    title: "AI Study Chat",
+    description: "Ask everyday questions and get step-by-step help with calculations, science, and code.",
   },
 };
 
