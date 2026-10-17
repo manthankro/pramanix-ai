@@ -32,9 +32,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const navItems: Array<{ id: ModuleId; label: string; icon: React.ReactNode; subtitle: string }> = [
     {
       id: "github",
-      label: "GitHub Project Mentor",
+      label: "Find & Learn Repos",
       icon: <Github className="w-4 h-4" />,
-      subtitle: "Repo analysis, zip & architecture",
+      subtitle: "Search topics and understand code",
     },
     {
       id: "builder",
@@ -44,27 +44,27 @@ export const Sidebar: React.FC<SidebarProps> = ({
     },
     {
       id: "tutor",
-      label: "Engineering Tutor",
+      label: "Study Tutor",
       icon: <GraduationCap className="w-4 h-4" />,
-      subtitle: "CS, ECE, EE, ME, CE concepts",
+      subtitle: "Understand engineering concepts",
     },
     {
       id: "viva",
-      label: "Doubt & Viva Help",
+      label: "Doubts & Viva Practice",
       icon: <HelpCircle className="w-4 h-4" />,
       subtitle: "Worked steps & oral viva exam",
     },
     {
       id: "notes",
-      label: "PDF & Notes Assistant",
+      label: "Notes & PDFs",
       icon: <FileText className="w-4 h-4" />,
       subtitle: "Grounded Q&A, flashcards & quiz",
     },
     {
       id: "coding",
-      label: "Coding Assistant",
+      label: "Code Helper",
       icon: <Code2 className="w-4 h-4" />,
-      subtitle: "Debug, Big-O, tests & DSA prep",
+      subtitle: "Upload code, debug, and learn",
     },
     {
       id: "research",
@@ -86,9 +86,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
     },
     {
       id: "chat",
-      label: "General AI Mentor",
+      label: "AI Study Chat",
       icon: <BotMessageSquare className="w-4 h-4" />,
-      subtitle: "Contextual conversation",
+      subtitle: "Questions, calculations, and chat",
     },
   ];
 
@@ -121,7 +121,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Navigation list */}
       <div className="flex-1 overflow-y-auto px-2 space-y-0.5 py-1 text-xs scrollbar-thin scrollbar-thumb-zinc-800">
         <div className="px-2 py-1 text-[10px] font-semibold tracking-wider text-zinc-400 uppercase">
-          Engineering Modules
+          STUDENT TOOLS
         </div>
         {navItems.map((item) => {
           const isActive = currentModule === item.id;
@@ -154,7 +154,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Footer / Active Workspace */}
       <div className="p-3 border-t border-zinc-800 text-xs bg-zinc-950/60">
         <div className="flex items-center justify-between text-zinc-400">
-          <span className="text-[11px]">Workspace:</span>
+          <span className="text-[11px]">Project:</span>
           <span className="text-zinc-200 font-medium truncate max-w-[120px]">
             {activeProjectName || "Capstone 2026"}
           </span>
