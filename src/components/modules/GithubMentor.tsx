@@ -188,8 +188,9 @@ export const GithubMentor: React.FC<GithubMentorProps> = ({ onConnectRepoToWorks
     setDebounceTimer(timer);
   };
 
-  const handleSearchSubmit = async () => {
-    const query = repoInput.trim();
+  const handleSearchSubmit = async (searchQuery = repoInput) => {
+    const query = searchQuery.trim();
+    setError(null);
     if (!query || loading) return;
     if (query.includes("/") || query.includes("github.com/")) {
       setShowDropdown(false);
@@ -383,7 +384,7 @@ export const GithubMentor: React.FC<GithubMentorProps> = ({ onConnectRepoToWorks
               {["machine learning", "student management system", "portfolio website"].map((topic) => (
                 <button
                   key={topic}
-                  onClick={() => { setRepoInput(topic); setShowDropdown(true); setTimeout(() => void handleSearchSubmit(), 0); }}
+                  onClick={() => { setRepoInput(topic); void handleSearchSubmit(topic); }}
                   className="rounded-full border border-zinc-700 bg-zinc-950 px-3 py-1.5 text-xs text-zinc-300 hover:border-emerald-500/60 hover:text-white"
                 >
                   {topic}
