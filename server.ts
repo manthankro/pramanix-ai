@@ -8,7 +8,10 @@ import { GoogleGenAI } from "@google/genai";
 
 dotenv.config();
 
-const __filename = fileURLToPath(import.meta.url);
+// Netlify bundles Functions as CommonJS, where import.meta.url may be undefined.
+const __filename = import.meta.url
+  ? fileURLToPath(import.meta.url)
+  : path.resolve(process.cwd(), "server.ts");
 const __dirname = path.dirname(__filename);
 
 const app = express();
