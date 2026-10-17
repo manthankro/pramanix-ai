@@ -1,13 +1,5 @@
-import React, { useState, useRef, useEffect } from "react";
-import {
-  BotMessageSquare,
-  Send,
-  Sparkles,
-  RefreshCw,
-  Trash2,
-  FolderGit2,
-  CheckCircle2,
-} from "lucide-react";
+import React, { useEffect, useRef, useState } from "react";
+import { Clock3, MessageCircle, Plus, Send, Sparkles, Trash2 } from "lucide-react";
 import { ChatMessage, WorkspaceProject } from "../../types";
 import { sendChatMessage } from "../../services/api";
 import { MarkdownView } from "../common/MarkdownView";
@@ -16,87 +8,129 @@ interface GeneralChatProps {
   currentProject?: WorkspaceProject;
 }
 
+interface SavedChat {
+  id: string;
+  title: string;
+  updatedAt: number;
+  messages: ChatMessage[];
+}
+
+const welcomeMessage = (): ChatMessage => ({
+  id: "welcome",
+  role: "assistant",
+  content: `Hi! I’m **Pramanix**, your study companion. Ask me about a class topic, a coding problem, a calculation, or anything you’re curious about.`,
+  timestamp: Date.now(),
+});
+
+const providerOptions = [
+  { id: "groq", label: "Groq", detail: "Fast · your current provider" },
+  { id: "gemini", label: "Gemini", detail: "Requires a Gemini API key" },
+  { id: "claude", label: "Claude", detail: "Requires an Anthropic API key" },
+  { id: "grok", label: "Grok", detail: "Requires an xAI API key" },
+  { id: "openai", label: "ChatGPT", detail: "Requires an OpenAI API key" },
+] as const;
+
+const initialChats = (): SavedChat[] => {
+  try {
+    const saved = localStorage.getItem("pramanix_recent_chats");
+    const parsed = saved ? JSON.parse(saved) : [];
+    if (Array.isArray(parsed) && parsed.length) return parsed;
+  } catch {
+    // Start with a clean chat if saved browser data is unavailable.
+  }
+  return [{
+    id: String(Date.now()),
+    title: "New chat",
+    updatedAt: Date.now(),
+    messages: [welcomeMessage()],
+  }];
+};
+
 export const GeneralChat: React.FC<GeneralChatProps> = ({ currentProject }) => {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: "intro-1",
-      role: "assistant",
-      content: `Hello! I am **Pramanix**, your engineering mentor and project workspace companion.
-
-I can help you:
-- **Analyze GitHub projects** (including \`manthankro/pramanix\`) with architectural walkthroughs and ZIP exports.
-- **Architect Student Capstones**: Generate full Software Requirements Specifications (SRS), modern tech stacks, 8-week milestone roadmaps, and viva defense plans.
-- **Explain STEM Concepts**: Step-by-step guidance across Computer Science, Electronics, Electrical, Mechanical, and Civil Engineering.
-- **Viva Voce Defense**: Conduct mock oral viva examinations with realistic external examiner feedback.
-- **Debug & Review Code**: Big-O analysis, race-condition detection, and edge-case test generation.
-
-What engineering challenge are we tackling today?`,
-      timestamp: Date.now(),
-    },
-  ]);
-
+  const [sessions, setSessions] = useState<SavedChat[]>(initialChats);
+  const [activeChatId, setActiveChatId] = useState(() => initialChats()[0]?.id || "");
   const [input, setInput] = useState("");
   const [provider, setProvider] = useState<"groq" | "gemini" | "claude" | "openai" | "grok">("groq");
   const [loading, setLoading] = useState(false);
-  const providerOptions = [
-    { id: "groq", name: "Groq", model: "GROQ_MODEL", hint: "Fast · Uses your existing Groq key" },
-    { id: "gemini", name: "Gemini", model: "GEMINI_MODEL", hint: "Google · Requires a Gemini API key" },
-    { id: "claude", name: "Claude", model: "CLAUDE_MODEL", hint: "Anthropic · Requires an Anthropic API key" },
-    { id: "grok", name: "Grok", model: "XAI_MODEL", hint: "xAI · Requires an xAI API key" },
-    { id: "openai", name: "ChatGPT", model: "OPENAI_MODEL", hint: "OpenAI · Requires an OpenAI API key" },
-  ] as const;
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+  const activeChat = sessions.find((chat) => chat.id === activeChatId) || sessions[0];
+  const messages = activeChat?.messages || [welcomeMessage()];
 
   useEffect(() => {
-    scrollToBottom();
+    try {
+      localStorage.setItem("pramanix_recent_chats", JSON.stringify(sessions.slice(0, 30)));
+    } catch (error) {
+      console.warn("Unable to save recent chats:", error);
+    }
+  }, [sessions]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
-  const handleSend = async (customPrompt?: string) => {
-    const textToSend = customPrompt || input;
-    if (!textToSend.trim() || loading) return;
+  const saveMessages = (nextMessages: ChatMessage[]) => {
+    setSessions((previous) =>
+      previous.map((chat) => {
+        if (chat.id !== activeChatId) return chat;
+        const firstQuestion = nextMessages.find((message) => message.role === "user")?.content;
+        return {
+          ...chat,
+          title: firstQuestion ? firstQuestion.slice(0, 42) + (firstQuestion.length > 42 ? "…" : "") : "New chat",
+          messages: nextMessages,
+          updatedAt: Date.now(),
+        };
+      })
+    );
+  };
 
-    const userMsg: ChatMessage = {
-      id: "user-" + Date.now(),
-      role: "user",
-      content: textToSend.trim(),
-      timestamp: Date.now(),
+  const startNewChat = () => {
+    const chat: SavedChat = {
+      id: String(Date.now()),
+      title: "New chat",
+      updatedAt: Date.now(),
+      messages: [welcomeMessage()],
     };
-
-    const nextMessages = [...messages, userMsg];
-    setMessages(nextMessages);
+    setSessions((previous) => [chat, ...previous].slice(0, 30));
+    setActiveChatId(chat.id);
     setInput("");
+  };
+
+  const handleSend = async (suggestion?: string) => {
+    const text = (suggestion ?? input).trim();
+    if (!text || loading || !activeChat) return;
+    const nextMessages: ChatMessage[] = [
+      ...messages,
+      { id: "user-" + Date.now(), role: "user", content: text, timestamp: Date.now() },
+    ];
+    setInput("");
+    saveMessages(nextMessages);
     setLoading(true);
 
     try {
-      const workspaceContext = currentProject
-        ? `Active Workspace Project: "${currentProject.name}" (${currentProject.domain})\nConnected Repo: "${currentProject.connectedRepo || "manthankro/pramanix"}"\nTasks Pending: ${currentProject.tasks.filter((t) => t.status !== "done").length}`
-        : "Connected Repo: manthankro/pramanix";
-
+      const now = new Date();
+      const context = [
+        currentProject
+          ? `Active student project: ${currentProject.name} (${currentProject.domain}). Repository: ${currentProject.connectedRepo || "none"}.`
+          : "No project is currently selected.",
+        `The student's local date and time is ${now.toLocaleString()}.`,
+      ].join("\n");
       const reply = await sendChatMessage(
-        nextMessages.map((m) => ({ role: m.role, content: m.content })),
-        workspaceContext,
+        nextMessages.map(({ role, content }) => ({ role, content })),
+        context,
         "general",
         provider
       );
-
-      const assistantMsg: ChatMessage = {
-        id: "asst-" + Date.now(),
-        role: "assistant",
-        content: reply,
-        timestamp: Date.now(),
-      };
-      setMessages([...nextMessages, assistantMsg]);
-    } catch (err: any) {
-      setMessages([
+      saveMessages([
+        ...nextMessages,
+        { id: "assistant-" + Date.now(), role: "assistant", content: reply, timestamp: Date.now() },
+      ]);
+    } catch (error: any) {
+      saveMessages([
         ...nextMessages,
         {
-          id: "err-" + Date.now(),
+          id: "error-" + Date.now(),
           role: "assistant",
-          content: `⚠️ Error generating response: ${err.message}`,
+          content: `I couldn’t get a response. ${error.message}`,
           timestamp: Date.now(),
         },
       ]);
@@ -105,169 +139,134 @@ What engineering challenge are we tackling today?`,
     }
   };
 
-  const clearChat = () => {
-    setMessages([
-      {
-        id: "intro-reset",
-        role: "assistant",
-        content: "Conversation cleared. How can I assist you with your engineering studies or project?",
-        timestamp: Date.now(),
-      },
-    ]);
-  };
-
-  const promptSuggestions = [
-    "Explain the architecture of manthankro/pramanix and how to run it",
-    "Turn my project idea into an 8-week milestone roadmap and SRS",
-    "Conduct an oral viva question on process synchronization and mutexes",
-    "Explain how to calculate Young's modulus from a stress-strain tensile test",
+  const suggestions = [
+    "Explain this topic like I’m new to it",
+    "Help me solve a math or physics problem",
+    "Review my code and explain the bug",
+    "Help me plan my study week",
   ];
 
   return (
-    <div className="h-full flex flex-col bg-zinc-950 text-zinc-200 overflow-hidden">
-      {/* Context Bar */}
-      <div className="px-6 py-2.5 bg-zinc-900/60 border-b border-zinc-800 flex items-center justify-between text-xs shrink-0">
-        <div className="flex items-center gap-2 text-zinc-400">
-          <FolderGit2 className="w-3.5 h-3.5 text-emerald-400" />
-          <span>Active Context:</span>
-          <span className="text-zinc-200 font-mono font-medium">
-            {currentProject?.connectedRepo || "manthankro/pramanix"}
-          </span>
-          {currentProject && (
-            <span className="text-zinc-500">· Project: {currentProject.name}</span>
-          )}
+    <div className="h-full flex bg-zinc-950 text-zinc-100 overflow-hidden">
+      <aside className="hidden md:flex w-64 shrink-0 flex-col border-r border-zinc-800 bg-zinc-950">
+        <div className="p-4 border-b border-zinc-800">
+          <button
+            onClick={startNewChat}
+            className="w-full flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 px-3 py-2.5 text-sm font-semibold text-white transition"
+          >
+            <Plus className="w-4 h-4" /> New chat
+          </button>
         </div>
-        <button
-          onClick={clearChat}
-          className="flex items-center gap-1 text-[11px] text-zinc-400 hover:text-red-400 transition cursor-pointer"
-        >
-          <Trash2 className="w-3 h-3" /> Clear History
-        </button>
-      </div>
-
-      {/* Messages Scroll Area */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-4 max-w-4xl mx-auto w-full">
-        {messages.map((m) => {
-          const isUser = m.role === "user";
-          return (
-            <div
-              key={m.id}
-              className={`flex items-start gap-3 ${isUser ? "flex-row-reverse" : "flex-row"}`}
+        <div className="px-4 pt-4 pb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">
+          <Clock3 className="w-3.5 h-3.5" /> Recent chats
+        </div>
+        <div className="flex-1 overflow-y-auto px-2 pb-3 space-y-1">
+          {sessions.map((chat) => (
+            <button
+              key={chat.id}
+              onClick={() => setActiveChatId(chat.id)}
+              className={`w-full flex items-start gap-2 rounded-lg px-3 py-2.5 text-left text-xs transition ${activeChatId === chat.id ? "bg-zinc-800 text-white" : "text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200"}`}
             >
-              <div
-                className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 text-xs font-bold ${
-                  isUser
-                    ? "bg-emerald-600 text-white"
-                    : "bg-zinc-800 border border-zinc-700 text-emerald-400"
-                }`}
-              >
-                {isUser ? "You" : "P"}
-              </div>
+              <MessageCircle className="w-3.5 h-3.5 mt-0.5 shrink-0 text-emerald-400" />
+              <span className="line-clamp-2">{chat.title}</span>
+            </button>
+          ))}
+        </div>
+        <div className="border-t border-zinc-800 p-3 text-[11px] text-zinc-500">
+          Your recent chats are saved in this browser.
+        </div>
+      </aside>
 
-              <div
-                className={`max-w-[85%] rounded-2xl px-4 py-3 text-xs leading-relaxed ${
-                  isUser
-                    ? "bg-emerald-600/20 border border-emerald-500/30 text-emerald-100 font-sans"
-                    : "bg-zinc-900/80 border border-zinc-800 text-zinc-200 shadow-sm"
-                }`}
-              >
-                {isUser ? (
-                  <p className="whitespace-pre-wrap">{m.content}</p>
-                ) : (
-                  <MarkdownView content={m.content} />
-                )}
-                <div
-                  className={`text-[10px] mt-2 font-mono ${
-                    isUser ? "text-emerald-400/80 text-right" : "text-zinc-500"
-                  }`}
-                >
-                  {new Date(m.timestamp).toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
+      <section className="min-w-0 flex-1 flex flex-col">
+        <div className="px-5 py-4 border-b border-zinc-800 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-base font-semibold">Ask Pramanix anything</h2>
+            <p className="mt-1 text-xs text-zinc-400">Study help, everyday questions, calculations, and coding support.</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <label className="text-xs text-zinc-400" htmlFor="chat-provider">Model</label>
+            <select
+              id="chat-provider"
+              value={provider}
+              onChange={(event) => setProvider(event.target.value as typeof provider)}
+              disabled={loading}
+              className="rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs text-zinc-100 outline-none focus:border-emerald-500"
+            >
+              {providerOptions.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
+            </select>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-4 py-6 md:px-8">
+          <div className="mx-auto max-w-3xl space-y-5">
+            {messages.length <= 1 && (
+              <div className="py-8">
+                <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-400">
+                  <Sparkles className="w-6 h-6" />
+                </div>
+                <h3 className="text-center text-xl font-semibold">What are you working on?</h3>
+                <p className="mt-2 text-center text-sm text-zinc-400">Ask a quick question or choose a starting point.</p>
+                <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {suggestions.map((suggestion) => (
+                    <button
+                      key={suggestion}
+                      onClick={() => handleSend(suggestion)}
+                      className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-3 text-left text-xs text-zinc-300 hover:border-emerald-500/50 hover:bg-zinc-900 transition"
+                    >
+                      {suggestion}
+                    </button>
+                  ))}
                 </div>
               </div>
-            </div>
-          );
-        })}
+            )}
 
-        {loading && (
-          <div className="flex items-start gap-3">
-            <div className="w-7 h-7 rounded-lg bg-zinc-800 border border-zinc-700 text-emerald-400 flex items-center justify-center text-xs font-bold shrink-0">
-              P
-            </div>
-            <div className="p-3 bg-zinc-900/80 border border-zinc-800 rounded-2xl text-xs text-zinc-400 flex items-center gap-2">
-              <RefreshCw className="w-3.5 h-3.5 animate-spin text-emerald-400" />
-              <span>Pramanix is thinking and synthesizing response...</span>
-            </div>
-          </div>
-        )}
-
-        <div ref={messagesEndRef} />
-      </div>
-
-      {/* Input area & prompt suggestions */}
-      <div className="p-4 bg-zinc-900/60 border-t border-zinc-800 shrink-0">
-        <div className="max-w-4xl mx-auto space-y-2.5">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <label className="flex items-center gap-2 text-xs text-zinc-300">
-              <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
-              <span>AI model</span>
-              <select
-                value={provider}
-                onChange={(event) => setProvider(event.target.value as typeof provider)}
-                disabled={loading}
-                className="rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-xs text-zinc-100 outline-none focus:border-emerald-500 disabled:opacity-60"
-                aria-label="Choose AI model provider"
-              >
-                {providerOptions.map((option) => (
-                  <option key={option.id} value={option.id}>{option.name}</option>
-                ))}
-              </select>
-            </label>
-            <span className="text-[11px] text-zinc-400">
-              {providerOptions.find((option) => option.id === provider)?.hint}
-            </span>
-          </div>
-          {messages.length <= 2 && (
-            <div className="flex flex-wrap gap-1.5 pb-1">
-              {promptSuggestions.map((s, i) => (
-                <button
-                  key={i}
-                  onClick={() => handleSend(s)}
-                  className="px-2.5 py-1 rounded bg-zinc-950 border border-zinc-800 text-[11px] text-zinc-400 hover:text-zinc-200 hover:border-zinc-700 transition cursor-pointer"
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
-          )}
-
-          <div className="flex items-end gap-2 bg-zinc-950 border border-zinc-700/80 rounded-xl p-2 focus-within:border-emerald-500 transition">
-            <textarea
-              rows={2}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask Pramanix anything (explain code, conceptual derivations, viva preparation, repo queries)..."
-              className="flex-1 bg-transparent px-2 py-1 text-xs text-zinc-100 placeholder-zinc-500 focus:outline-none resize-none leading-relaxed"
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSend();
-                }
-              }}
-            />
-            <button
-              onClick={() => handleSend()}
-              disabled={loading || !input.trim()}
-              className="p-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition cursor-pointer disabled:opacity-50 shrink-0"
-              title="Send message"
-            >
-              <Send className="w-4 h-4" />
-            </button>
+            {messages.map((message) => (
+              <div key={message.id} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
+                <div className={`max-w-[90%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${message.role === "user" ? "bg-emerald-600/20 border border-emerald-500/30 text-emerald-50" : "bg-zinc-900 border border-zinc-800 text-zinc-200"}`}>
+                  {message.role === "user" ? <p className="whitespace-pre-wrap">{message.content}</p> : <MarkdownView content={message.content} />}
+                  <div className="mt-2 text-[10px] text-zinc-500">
+                    {new Date(message.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                  </div>
+                </div>
+              </div>
+            ))}
+            {loading && <div className="text-xs text-emerald-300 animate-pulse">Pramanix is thinking…</div>}
+            <div ref={messagesEndRef} />
           </div>
         </div>
-      </div>
+
+        <div className="border-t border-zinc-800 bg-zinc-950/95 p-4">
+          <div className="mx-auto max-w-3xl">
+            <p className="mb-2 text-[11px] text-zinc-500">
+              {providerOptions.find((option) => option.id === provider)?.detail}
+            </p>
+            <div className="flex items-end gap-2 rounded-2xl border border-zinc-700 bg-zinc-900 p-2 focus-within:border-emerald-500">
+              <textarea
+                rows={2}
+                value={input}
+                onChange={(event) => setInput(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" && !event.shiftKey) {
+                    event.preventDefault();
+                    handleSend();
+                  }
+                }}
+                placeholder="Ask a question, paste a problem, or describe what you need…"
+                className="min-w-0 flex-1 resize-none bg-transparent px-2 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 outline-none"
+              />
+              <button
+                onClick={() => handleSend()}
+                disabled={loading || !input.trim()}
+                className="rounded-xl bg-emerald-600 p-3 text-white transition hover:bg-emerald-500 disabled:opacity-40"
+                aria-label="Send message"
+              >
+                <Send className="h-4 w-4" />
+              </button>
+            </div>
+            <p className="mt-2 text-center text-[10px] text-zinc-600">AI can make mistakes. Check important answers with your course material.</p>
+          </div>
+        </div>
+      </section>
     </div>
   );
 };
