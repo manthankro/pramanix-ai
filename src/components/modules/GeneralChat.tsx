@@ -134,7 +134,9 @@ export const GeneralChat: React.FC<GeneralChatProps> = ({ currentProject }) => {
         {
           id: "error-" + Date.now(),
           role: "assistant",
-          content: `I couldn’t get a response. ${error.message}`,
+          content: String(error?.message || "").toLowerCase().includes("not configured")
+            ? "AI isn’t connected yet. Add GROQ_API_KEY in Netlify → Site configuration → Environment variables, enable it for Functions, and redeploy."
+            : `I couldn’t get a response. ${error.message}`,
           timestamp: Date.now(),
         },
       ]);
