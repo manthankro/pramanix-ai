@@ -67,7 +67,7 @@ export const Header: React.FC<HeaderProps> = ({
         <h1 className="text-sm font-semibold text-zinc-100 flex items-center gap-2">
           {meta.title}
           <span className="flex items-center gap-1 text-[11px] font-normal text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-            <Sparkles className="w-3 h-3" /> AI Mentor Active
+            <Sparkles className="w-3 h-3" /> Student tools
           </span>
         </h1>
         <p className="text-xs text-zinc-400 truncate max-w-2xl">{meta.description}</p>
