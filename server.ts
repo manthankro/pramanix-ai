@@ -170,16 +170,79 @@ async function callGroq(prompt: string, systemInstruction: string, temperature: 
   return data.choices?.[0]?.message?.content || "";
 }
 
-// Single entry point used by every route.
-async function callLLM(prompt: string, systemInstruction?: string, temperature = 0.7) {
+async function callOpenAICompatible(
+  provider: "openai" | "xai",
+  prompt: string,
+  systemInstruction: string,
+  temperature: number
+) {
+  const isOpenAI = provider === "openai";
+  const apiKey = isOpenAI ? process.env.OPENAI_API_KEY : process.env.XAI_API_KEY;
+  if (!apiKey) throw new Error(`${isOpenAI ? "OPENAI_API_KEY" : "XAI_API_KEY"} is not configured in Netlify environment variables.`);
+  const model = isOpenAI
+    ? process.env.OPENAI_MODEL || "gpt-4.1-mini"
+    : process.env.XAI_MODEL || "grok-4.6";
+  const baseUrl = isOpenAI ? "https://api.openai.com/v1" : "https://api.x.ai/v1";
+  const r = await fetch(`${baseUrl}/chat/completions`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({
+      model,
+      temperature,
+      messages: [
+        { role: "system", content: systemInstruction },
+        { role: "user", content: prompt },
+      ],
+    }),
+    signal: AbortSignal.timeout(45_000),
+  });
+  if (!r.ok) throw new Error(`${provider} ${r.status}: ${(await r.text()).slice(0, 300)}`);
+  const data: any = await r.json();
+  return data.choices?.[0]?.message?.content || "";
+}
+
+async function callClaude(prompt: string, systemInstruction: string, temperature: number) {
+  if (!process.env.ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY is not configured in Netlify environment variables.");
+  const r = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": process.env.ANTHROPIC_API_KEY,
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify({
+      model: process.env.CLAUDE_MODEL || "claude-sonnet-4-20250514",
+      max_tokens: 4096,
+      temperature,
+      system: systemInstruction,
+      messages: [{ role: "user", content: prompt }],
+    }),
+    signal: AbortSignal.timeout(45_000),
+  });
+  if (!r.ok) throw new Error(`Claude ${r.status}: ${(await r.text()).slice(0, 300)}`);
+  const data: any = await r.json();
+  return (data.content || []).filter((part: any) => part.type === "text").map((part: any) => part.text).join("");
+}
+
+// Existing tools keep automatic Groq -> Gemini fallback; chat can select a provider explicitly.
+async function callLLM(
+  prompt: string,
+  systemInstruction?: string,
+  temperature = 0.7,
+  provider?: string
+) {
   const system = systemInstruction || DEFAULT_SYSTEM;
+  if (provider === "groq") return callGroq(prompt, system, temperature);
+  if (provider === "gemini") return callGemini(prompt, system, temperature);
+  if (provider === "claude") return callClaude(prompt, system, temperature);
+  if (provider === "openai") return callOpenAICompatible("openai", prompt, system, temperature);
+  if (provider === "grok") return callOpenAICompatible("xai", prompt, system, temperature);
+
   const hasGroq = !!process.env.GROQ_API_KEY;
   const hasGemini = !!process.env.GEMINI_API_KEY;
-
   if (!hasGroq && !hasGemini) {
     throw new Error("No AI provider configured. Set GROQ_API_KEY and/or GEMINI_API_KEY.");
   }
-
   if (hasGroq) {
     try {
       return await callGroq(prompt, system, temperature);
@@ -220,7 +283,7 @@ app.use("/api/gemini", rateLimit({ windowMs: 60_000, max: AI_RATE_LIMIT_PER_MIN 
 // 1. General AI Assistant / Chat Route
 app.post("/api/gemini/chat", async (req, res) => {
   try {
-    const { messages, context, mode } = req.body;
+    const { messages, context, mode, provider } = req.body;
     let systemInstruction =
       "You are Pramanix, an authoritative engineering mentor and technical companion. Provide structured, precise, clear, and step-by-step responses. Format code blocks with language identifiers. Avoid fluffy intros.";
 
@@ -254,7 +317,8 @@ app.post("/api/gemini/chat", async (req, res) => {
       formattedPrompt += (req.body.prompt as string) || "Hello Pramanix, introduce your capabilities.";
     }
 
-    const reply = await callLLM(formattedPrompt, systemInstruction);
+    const selectedProvider = ["groq", "gemini", "claude", "openai", "grok"].includes(provider) ? provider : undefined;
+    const reply = await callLLM(formattedPrompt, systemInstruction, 0.7, selectedProvider);
     res.json({ reply });
   } catch (error: any) {
     console.error("Chat API error:", error);
