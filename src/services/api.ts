@@ -36,7 +36,7 @@ export async function analyzeTask(task: string, data: any): Promise<string> {
   return resp.result || "";
 }
 
-export async function fetchGitHubRepo(repo = "manthankro/pramanix"): Promise<RepoData> {
+export async function fetchGitHubRepo(repo = "manthankro/pramanix-ai-"): Promise<RepoData> {
   const res = await fetch(`/api/github/repo?repo=${encodeURIComponent(repo)}`);
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
@@ -57,7 +57,7 @@ export async function fetchGitHubFile(repo: string, filePath: string, branch = "
   return data.content || "";
 }
 
-export function getDownloadZipUrl(repo = "manthankro/pramanix", branch = "main"): string {
+export function getDownloadZipUrl(repo = "manthankro/pramanix-ai-", branch = "main"): string {
   return `/api/github/download-zip?repo=${encodeURIComponent(repo)}&branch=${encodeURIComponent(branch)}`;
 }
 
@@ -76,7 +76,7 @@ export interface RepoInsightsData {
   }>;
 }
 
-export async function fetchGitHubInsights(repo = "manthankro/pramanix"): Promise<RepoInsightsData> {
+export async function fetchGitHubInsights(repo = "manthankro/pramanix-ai-"): Promise<RepoInsightsData> {
   const res = await fetch(`/api/github/insights?repo=${encodeURIComponent(repo)}`);
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));

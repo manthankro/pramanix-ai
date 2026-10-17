@@ -37,7 +37,7 @@ interface GithubMentorProps {
 }
 
 export const GithubMentor: React.FC<GithubMentorProps> = ({ onConnectRepoToWorkspace }) => {
-  const [repoInput, setRepoInput] = useState("manthankro/pramanix");
+  const [repoInput, setRepoInput] = useState("manthankro/pramanix-ai-");
   const [loading, setLoading] = useState(false);
   const [repoData, setRepoData] = useState<RepoData | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -71,7 +71,7 @@ export const GithubMentor: React.FC<GithubMentorProps> = ({ onConnectRepoToWorks
 
   // Load initial repo
   useEffect(() => {
-    loadRepo("manthankro/pramanix");
+    loadRepo("manthankro/pramanix-ai-");
   }, []);
 
   const loadInsights = async (target: string) => {
@@ -358,10 +358,10 @@ export const GithubMentor: React.FC<GithubMentorProps> = ({ onConnectRepoToWorks
             <span>{error}</span>
           </div>
           <button
-            onClick={() => loadRepo("manthankro/pramanix")}
+            onClick={() => loadRepo("manthankro/pramanix-ai-")}
             className="text-[11px] underline hover:text-white cursor-pointer"
           >
-            Reset to default (manthankro/pramanix)
+            Reset to default (manthankro/pramanix-ai-)
           </button>
         </div>
       )}

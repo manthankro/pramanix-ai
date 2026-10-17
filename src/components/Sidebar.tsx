@@ -108,7 +108,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <span className="text-[10px] text-emerald-400/90 font-mono">Python</span>
         </div>
         <div className="font-mono text-zinc-200 truncate font-medium text-[11px]">
-          manthankro/pramanix
+          manthankro/pramanix-ai-
         </div>
         <button
           onClick={onDownloadPramanixZip}

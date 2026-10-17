@@ -20,11 +20,11 @@ const INITIAL_PROJECTS: WorkspaceProject[] = [
     name: "Pramanix System Architecture",
     domain: "Distributed Python & AI Systems",
     description: "Core microservice and repository architecture for Pramanix platform.",
-    connectedRepo: "manthankro/pramanix",
+    connectedRepo: "manthankro/pramanix-ai-",
     tasks: [
       {
         id: "t-1",
-        title: "Analyze manthankro/pramanix dependencies & pyproject.toml",
+        title: "Analyze manthankro/pramanix-ai- dependencies & pyproject.toml",
         status: "done",
         priority: "high",
         milestone: "M1: Architecture & SRS",
@@ -68,7 +68,7 @@ const INITIAL_PROJECTS: WorkspaceProject[] = [
         name: "main.py",
         content: `"""
 Pramanix Core Entry Point
-Connected to https://github.com/manthankro/pramanix
+Connected to https://github.com/manthankro/pramanix-ai-
 """
 import sys
 
@@ -93,11 +93,11 @@ CMD ["python", "main.py"]
       },
       {
         name: "README.md",
-        content: `# Pramanix System Workspace\n\nConnected to https://github.com/manthankro/pramanix.\nDownload full ZIP via top header.\n`,
+        content: `# Pramanix System Workspace\n\nConnected to https://github.com/manthankro/pramanix-ai-.\nDownload full ZIP via top header.\n`,
         language: "markdown",
       },
     ],
-    notes: `## Pramanix Architecture Notes\n- Connected repository: manthankro/pramanix\n- Default branch: main\n- Tech stack: Python 3.11, Docker, Poetry/pyproject.toml\n- Objective: Comprehensive student project engineering mentor & viva companion.`,
+    notes: `## Pramanix Architecture Notes\n- Connected repository: manthankro/pramanix-ai-\n- Default branch: main\n- Tech stack: Python 3.11, Docker, Poetry/pyproject.toml\n- Objective: Comprehensive student project engineering mentor & viva companion.`,
     createdAt: Date.now() - 86400000,
     updatedAt: Date.now(),
   },
@@ -131,10 +131,10 @@ export default function App() {
 
   const activeProject = projects.find((p) => p.id === activeProjectId) || projects[0];
 
-  // 1-Click Download of manthankro/pramanix ZIP
+  // 1-Click Download of manthankro/pramanix-ai- ZIP
   const handleDownloadPramanixZip = () => {
     setIsDownloadingZip(true);
-    const targetRepo = activeProject?.connectedRepo || "manthankro/pramanix";
+    const targetRepo = activeProject?.connectedRepo || "manthankro/pramanix-ai-";
     const downloadUrl = getDownloadZipUrl(targetRepo);
 
     // Trigger download
@@ -162,7 +162,7 @@ export default function App() {
       name: newProj.name,
       domain: newProj.domain,
       description: newProj.description,
-      connectedRepo: "manthankro/pramanix",
+      connectedRepo: "manthankro/pramanix-ai-",
       tasks: [
         { id: "t-b1", title: "Review SRS & Functional Requirements", status: "done", priority: "high" },
         { id: "t-b2", title: "Set up repository boilerplate & dependencies", status: "in_progress", priority: "high" },
@@ -197,7 +197,7 @@ export default function App() {
       name,
       domain,
       description: `New project in ${domain}`,
-      connectedRepo: "manthankro/pramanix",
+      connectedRepo: "manthankro/pramanix-ai-",
       tasks: [
         { id: "t-new1", title: "Draft system architecture & modules", status: "todo", priority: "high" },
         { id: "t-new2", title: "Initialize Git repository & README", status: "todo", priority: "medium" },

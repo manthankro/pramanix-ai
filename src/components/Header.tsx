@@ -78,11 +78,11 @@ export const Header: React.FC<HeaderProps> = ({
           onClick={onDownloadZip}
           disabled={isDownloadingZip}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-700/80 text-xs font-medium text-zinc-200 transition cursor-pointer shadow-sm disabled:opacity-60"
-          title="Directly download manthankro/pramanix archive zip"
+          title="Directly download manthankro/pramanix-ai- archive zip"
         >
           <FolderGit2 className="w-3.5 h-3.5 text-emerald-400" />
           <Download className="w-3.5 h-3.5 text-zinc-400" />
-          <span>{isDownloadingZip ? "Preparing ZIP..." : "Download manthankro/pramanix ZIP"}</span>
+          <span>{isDownloadingZip ? "Preparing ZIP..." : "Download manthankro/pramanix-ai- ZIP"}</span>
         </button>
       </div>
     </header>

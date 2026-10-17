@@ -731,11 +731,18 @@ async function startServer() {
   });
 }
 
-process.on("unhandledRejection", (reason) => {
-  console.error("Unhandled promise rejection:", reason);
-});
+// Export the Express app for Netlify Functions. Only start a long-running listener
+// when this file is the process entry point (npm run dev / npm start).
+export { app };
 
-startServer().catch((err) => {
-  console.error("Fatal server error:", err);
-  process.exit(1);
-});
+const isDirectRun = process.argv[1] && path.resolve(process.argv[1]) === __filename;
+if (isDirectRun) {
+  process.on("unhandledRejection", (reason) => {
+    console.error("Unhandled promise rejection:", reason);
+  });
+
+  startServer().catch((err) => {
+    console.error("Fatal server error:", err);
+    process.exit(1);
+  });
+}

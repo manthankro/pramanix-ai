@@ -15,7 +15,7 @@
 
 **Pramanix AI** is a comprehensive engineering mentor, GitHub repository analyzer, viva simulator, and technical capstone project workspace. Designed for engineering students, computer science researchers, and developers, Pramanix bridges the gap between theoretical computer science coursework and production-ready software engineering.
 
-AI responses are served by **Groq** (ultra-low-latency inference) with an automatic **Gemini** fallback, so the app keeps working even when one provider is rate limited.
+AI responses use **Groq** by default. Gemini can be configured as an optional fallback.
 
 ---
 
@@ -134,7 +134,7 @@ AI responses are served by **Groq** (ultra-low-latency inference) with an automa
 ```
 
 - **Frontend**: React 19 + TypeScript, Vite, Tailwind CSS, Recharts, Lucide React, JSZip.
-- **Backend**: Node.js (tsx) + Express. In production the same server serves the built frontend, so the whole app is a **single deployable service** with no CORS setup.
+- **Backend**: Node.js (tsx) + Express. Use the built-in server on Render/Railway, or the Netlify Functions adapter on Netlify; both serve the same `/api/*` routes without CORS.
 - **AI**: Groq chat completions (OpenAI-compatible) as the primary provider, Google Gemini as automatic fallback.
 
 ---
@@ -145,7 +145,9 @@ AI responses are served by **Groq** (ultra-low-latency inference) with an automa
 ├── server.ts                       # Express backend: AI routes, GitHub proxy, static hosting
 ├── index.html                      # HTML5 entry point
 ├── package.json                    # Dependencies and npm scripts
-├── render.yaml                     # Render blueprint (one-click deploy)
+├── render.yaml                     # Render Blueprint deployment
+├── netlify.toml                    # Netlify build, function and route configuration
+├── netlify/functions/api.ts        # Express API serverless function
 ├── .env.example                    # Environment variable template
 ├── metadata.json                   # Applet configuration and metadata
 ├── vite.config.ts                  # Vite build configuration
@@ -258,9 +260,9 @@ Copy `.env.example` to `.env`:
 
 | Variable | Required | Description |
 |---|---|---|
-| `GROQ_API_KEY` | One of Groq/Gemini | Groq API key. Used first for fast responses. |
+| `GROQ_API_KEY` | Required for AI | Groq API key. Used first for fast responses. |
 | `GROQ_MODEL` | No | Groq model ID (default `openai/gpt-oss-120b`). Verify at the Groq models page. |
-| `GEMINI_API_KEY` | One of Groq/Gemini | Gemini API key. Fallback when Groq fails or is rate limited. |
+| `GEMINI_API_KEY` | Optional | Gemini API key. Fallback when Groq fails or is rate limited. |
 | `GEMINI_MODEL` | No | Gemini model ID (default `gemini-3.8-flash`). |
 | `GITHUB_TOKEN` | Recommended | Raises GitHub API limit from 60 to 5,000 requests/hour. No scopes needed. |
 | `PORT` | No | Server port (default `3000`). |
@@ -272,27 +274,29 @@ Copy `.env.example` to `.env`:
 
 ## Deployment
 
-The app deploys as **one web service**: Express serves both the API and the built frontend.
+### Netlify (full app: frontend + Express API)
 
-### Render (recommended, free tier)
+Netlify runs the Express API through a serverless function and serves the Vite build as static files.
 
-1. Push this repo to GitHub.
-2. In Render: **New > Blueprint**, select the repo. `render.yaml` configures everything.
-3. When prompted, set `GROQ_API_KEY`, `GEMINI_API_KEY`, and `GITHUB_TOKEN`.
-4. Open the generated `onrender.com` URL.
+1. Import this repository into Netlify and keep the repository root as the base directory.
+2. Set the build command to `npm install --include=dev && npm run build` and the publish directory to `dist` (these are also configured in `netlify.toml`).
+3. In **Site configuration → Environment variables**, add:
+   - `GROQ_API_KEY` — required for AI features.
+   - `GROQ_MODEL` — optional; defaults to `openai/gpt-oss-120b`. Choose a model available to your Groq account.
+   - `GITHUB_TOKEN` — recommended to avoid GitHub's low unauthenticated API limit.
+4. Deploy, then open `/api/health`. It should report `llm.primary` as `groq:<model>`. Try a GitHub search and an AI action before presenting.
 
-Manual setup (without the blueprint):
+Do not put provider keys in `netlify.toml` or frontend variables. Add them in Netlify's environment-variable settings so the function can read them at runtime. The app works with Groq alone; Gemini is an optional fallback only if you later configure `GEMINI_API_KEY`.
+
+### Render / Railway / any Node host
+
+The repository also supports a single long-running Node service. On Render, create a Blueprint from `render.yaml`, add `GROQ_API_KEY` (Gemini is optional), and open the generated URL. Manual setup uses:
+
 - **Build command**: `npm install --include=dev && npm run build`
 - **Start command**: `npm start`
 - **Health check path**: `/healthz`
-- **Environment**: `NODE_ENV=production`, plus the keys above.
 
-> **Free-tier cold starts:** Render free services sleep after inactivity and take roughly a minute to wake. Open the URL (or point a free uptime pinger at `/healthz`) a few minutes before a live demo.
-
-### Railway / any Node host
-Use the same build and start commands and the same environment variables.
-
----
+> **Free-tier cold starts:** Render free services may sleep after inactivity. Open the URL a few minutes before a live demo.
 
 ## Troubleshooting
 
