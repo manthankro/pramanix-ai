@@ -3,10 +3,10 @@
   <h1>Pramanix AI</h1>
   <p><strong>AI Engineering Mentor & Student Project Workspace</strong></p>
 
-  [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue.svg)](https://www.typescriptlang.org/)
-  [![React](https://img.shields.io/badge/React-18-61dafb.svg)](https://reactjs.org/)
+  [![TypeScript](https://img.shields.io/badge/TypeScript-blue.svg)](https://www.typescriptlang.org/)
+  [![React](https://img.shields.io/badge/React-19-61dafb.svg)](https://reactjs.org/)
   [![Tailwind CSS](https://img.shields.io/badge/Tailwind-CSS-38bdf8.svg)](https://tailwindcss.com/)
-  [![Recharts](https://img.shields.io/badge/Recharts-2.x-22c55e.svg)](https://recharts.org/)
+  [![Recharts](https://img.shields.io/badge/Recharts-charts-22c55e.svg)](https://recharts.org/)
   [![Express](https://img.shields.io/badge/Express-4.x-gray.svg)](https://expressjs.com/)
   [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 </div>
@@ -15,30 +15,20 @@
 
 **Pramanix AI** is a comprehensive engineering mentor, GitHub repository analyzer, viva simulator, and technical capstone project workspace. Designed for engineering students, computer science researchers, and developers, Pramanix bridges the gap between theoretical computer science coursework and production-ready software engineering.
 
+AI responses are served by **Groq** (ultra-low-latency inference) with an automatic **Gemini** fallback, so the app keeps working even when one provider is rate limited.
+
 ---
 
 ## Table of Contents
 
 - [Key Features](#key-features)
-  - [1. GitHub Mentor & Repository Hub](#1-github-mentor--repository-hub)
-  - [2. Interactive Gantt Timeline & Milestone View](#2-interactive-gantt-timeline--milestone-view)
-  - [3. Project Progress Dashboard](#3-project-progress-dashboard)
-  - [4. Student Project Builder & Architecture Scaffolding](#4-student-project-builder--architecture-scaffolding)
-  - [5. Timer-Based Mock Viva Simulator & Doubt Help](#5-timer-based-mock-viva-simulator--doubt-help)
-  - [6. Project Bundle (.ZIP) Exporter](#6-project-bundle-zip-exporter)
-  - [7. PDF & Engineering Notes Assistant](#7-pdf--engineering-notes-assistant)
-  - [8. Coding Assistant & Complexity Auditor](#8-coding-assistant--complexity-auditor)
-  - [9. Research Assistant & Trade-Off Matrix](#9-research-assistant--trade-off-matrix)
-  - [10. Career & Technical Resume Prep](#10-career--technical-resume-prep)
 - [Architecture & Tech Stack](#architecture--tech-stack)
 - [Project Structure](#project-structure)
 - [API Endpoints](#api-endpoints)
 - [Getting Started](#getting-started)
-  - [Prerequisites](#prerequisites)
-  - [Installation](#installation)
-  - [Development Server](#development-server)
-  - [Production Build](#production-build)
 - [Configuration & Environment Variables](#configuration--environment-variables)
+- [Deployment](#deployment)
+- [Troubleshooting](#troubleshooting)
 - [License](#license)
 
 ---
@@ -46,7 +36,7 @@
 ## Key Features
 
 ### 1. GitHub Mentor & Repository Hub
-- **Repository Search & Metadata**: Search public GitHub repositories by keyword, owner, or repo slug (`manthankro/pramanix`).
+- **Repository Search & Metadata**: Search public GitHub repositories by keyword, owner, or repo slug (`manthankro/pramanix-ai-`).
 - **Deep Architecture Inspection**: Auto-inspects repository file trees, READMEs, Docker configurations, and dependency manifests (`pyproject.toml`, `package.json`, `requirements.txt`).
 - **Visual Repository Insights (Recharts)**:
   - **Commit Frequency & Activity**: Weekly commit velocity and sprint cadence.
@@ -119,7 +109,7 @@
 
 ```
  ┌─────────────────────────────────────────────────────────────┐
- │                    React 18 Frontend SPA                    │
+ │                    React 19 Frontend SPA                    │
  │  ┌──────────────────────────────────────────────────────┐   │
  │  │ Tailwind CSS  •  Lucide Icons  •  Recharts  •  JSZip │   │
  │  └──────────────────────────────────────────────────────┘   │
@@ -130,38 +120,33 @@
         ▼                     ▼                     ▼
  ┌─────────────────────────────────────────────────────────────┐
  │                Express Backend (`server.ts`)                │
+ │  rate limiting • input validation • health checks           │
  │  ┌─────────────────────────┬─────────────────────────────┐  │
- │  │  /api/github/repo       │  /api/github/insights       │  │
- │  │  /api/github/search     │  /api/github/zip            │  │
- │  └─────────────────────────┴─────────────────────────────┘  │
- └──────────────────────────────┬──────────────────────────────┘
-                                │
-                                ▼
- ┌─────────────────────────────────────────────────────────────┐
- │       External Services: GitHub REST API & Gemini API       │
- └─────────────────────────────────────────────────────────────┘
+ │  │  /api/gemini/*  (AI)    │  /api/github/*  (proxy)     │  │
+ │  └────────────┬────────────┴──────────────┬──────────────┘  │
+ └───────────────┼───────────────────────────┼─────────────────┘
+                 ▼                           ▼
+      ┌─────────────────────┐       ┌──────────────────┐
+      │ Groq (primary, fast)│       │  GitHub REST API │
+      │   └─ fallback ─▶    │       └──────────────────┘
+      │ Google Gemini       │
+      └─────────────────────┘
 ```
 
-- **Frontend**:
-  - **Framework**: React 18 with TypeScript
-  - **Bundler**: Vite
-  - **Styling**: Tailwind CSS
-  - **Data Visualization**: Recharts (BarChart, AreaChart, PieChart, ResponsiveContainer)
-  - **Icons**: Lucide React
-  - **Archive Generation**: JSZip & FileSaver utilities
-- **Backend**:
-  - **Runtime**: Node.js & tsx
-  - **Server**: Express
-  - **Integration**: GitHub REST API Proxy with caching and error fallbacks
+- **Frontend**: React 19 + TypeScript, Vite, Tailwind CSS, Recharts, Lucide React, JSZip.
+- **Backend**: Node.js (tsx) + Express. In production the same server serves the built frontend, so the whole app is a **single deployable service** with no CORS setup.
+- **AI**: Groq chat completions (OpenAI-compatible) as the primary provider, Google Gemini as automatic fallback.
 
 ---
 
 ## Project Structure
 
 ```
-├── server.ts                       # Express backend server with GitHub & API routes
+├── server.ts                       # Express backend: AI routes, GitHub proxy, static hosting
 ├── index.html                      # HTML5 entry point
-├── package.json                    # Project dependencies and npm scripts
+├── package.json                    # Dependencies and npm scripts
+├── render.yaml                     # Render blueprint (one-click deploy)
+├── .env.example                    # Environment variable template
 ├── metadata.json                   # Applet configuration and metadata
 ├── vite.config.ts                  # Vite build configuration
 ├── src/
@@ -170,7 +155,7 @@
 │   ├── types/
 │   │   └── index.ts                # TypeScript interfaces (WorkspaceProject, ProjectTask, RepoData)
 │   ├── services/
-│   │   ├── api.ts                  # GitHub and system API client
+│   │   ├── api.ts                  # GitHub and AI API client
 │   │   └── zipExport.ts            # Client-side JSZip project packager
 │   └── components/
 │       ├── Header.tsx              # Application header with 1-click ZIP download
@@ -195,29 +180,46 @@
 
 ## API Endpoints
 
-The backend (`server.ts`) exposes proxy routes to fetch GitHub repository data safely:
+### Health
 
 | Method | Endpoint | Description |
 |---|---|---|
-| `GET` | `/api/github/repo?repo={owner/name}` | Fetches repository details, stars, forks, files, and README |
-| `GET` | `/api/github/search?q={query}` | Searches public GitHub repositories matching the query |
-| `GET` | `/api/github/insights?repo={owner/name}` | Returns commit frequency, language breakdown, and contributor statistics |
-| `GET` | `/api/github/zip?repo={owner/name}` | Streams or redirects to repository ZIP archive |
+| `GET` | `/healthz` | Plain `ok`, used by hosting health checks and uptime pings |
+| `GET` | `/api/health` | JSON status: active AI provider/fallback and whether a GitHub token is set (no secrets) |
+
+### AI
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/gemini/chat` | Chat with the mentor. Body: `{ messages, context?, mode? }` where `mode` is `general`, `viva`, `doubt` or `research` |
+| `POST` | `/api/gemini/analyze` | Specialised tasks. Body: `{ task, data }` for `project_builder`, `github_diagnose`, `code_review`, `viva_questions`, `notes_quiz_flashcards`, `resume_audit`, `compare_tech` |
+
+The `/api/gemini/*` paths keep their original names for compatibility; requests are answered by Groq first, then Gemini.
+
+### GitHub proxy
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/github/repo?repo={owner/name}` | Repository details, stars, forks, files, and README |
+| `GET` | `/api/github/search?q={query}` | Searches public GitHub repositories |
+| `GET` | `/api/github/insights?repo={owner/name}` | Commit frequency, language breakdown, and contributor statistics |
+| `GET` | `/api/github/file?repo={owner/name}&path={path}&branch={branch}` | Raw file content |
+| `GET` | `/api/github/download-zip?repo={owner/name}&branch={branch}` | Streams the repository ZIP archive |
 
 ---
 
 ## Getting Started
 
 ### Prerequisites
-- **Node.js**: v18.0.0 or higher
-- **npm**: v9.0.0 or higher
+- **Node.js**: v20 or higher
+- **npm**: v9 or higher
 
 ### Installation
 
-1. Clone or download the repository:
+1. Clone the repository:
    ```bash
-   git clone https://github.com/manthankro/pramanix.git
-   cd pramanix
+   git clone https://github.com/manthankro/pramanix-ai-.git
+   cd pramanix-ai-
    ```
 
 2. Install dependencies:
@@ -225,45 +227,79 @@ The backend (`server.ts`) exposes proxy routes to fetch GitHub repository data s
    npm install
    ```
 
+3. Create your environment file and add your keys:
+   ```bash
+   cp .env.example .env
+   ```
+
 ### Development Server
 
-Start the full-stack development server (Express backend + Vite frontend):
+Start the full-stack development server (Express backend + Vite frontend with hot reload):
 ```bash
 npm run dev
 ```
 
-The application will be live at:
+The application will be live at `http://localhost:3000`.
+
+### Production Build (local)
+
+```bash
+npm run build
+npm start
 ```
-http://localhost:3000
-```
 
-### Production Build
-
-1. Build the production client bundle:
-   ```bash
-   npm run build
-   ```
-
-2. Start the production server:
-   ```bash
-   npm start
-   ```
+`npm start` runs the server in production mode and serves the built `dist/` folder.
 
 ---
 
 ## Configuration & Environment Variables
 
-Copy `.env.example` to `.env` if you need to configure custom API tokens:
+Copy `.env.example` to `.env`:
 
-```env
-# Optional: GitHub Personal Access Token to avoid unauthenticated rate limits (60 req/hr)
-GITHUB_TOKEN=
+| Variable | Required | Description |
+|---|---|---|
+| `GROQ_API_KEY` | One of Groq/Gemini | Groq API key. Used first for fast responses. |
+| `GROQ_MODEL` | No | Groq model ID (default `openai/gpt-oss-120b`). Verify at the Groq models page. |
+| `GEMINI_API_KEY` | One of Groq/Gemini | Gemini API key. Fallback when Groq fails or is rate limited. |
+| `GEMINI_MODEL` | No | Gemini model ID (default `gemini-3.8-flash`). |
+| `GITHUB_TOKEN` | Recommended | Raises GitHub API limit from 60 to 5,000 requests/hour. No scopes needed. |
+| `PORT` | No | Server port (default `3000`). |
+| `NODE_ENV` | No | Set to `production` on your host. |
+| `RATE_LIMIT_PER_MIN` | No | AI requests per minute per client IP (default `60`). |
+| `DEFAULT_REPO` | No | Default repo in the GitHub Mentor module. |
 
-# Server port (defaults to 3000)
-PORT=3000
-```
+---
 
-*Note: Pramanix functions out of the box with intelligent fallback data and public GitHub endpoints even if no token is supplied.*
+## Deployment
+
+The app deploys as **one web service**: Express serves both the API and the built frontend.
+
+### Render (recommended, free tier)
+
+1. Push this repo to GitHub.
+2. In Render: **New > Blueprint**, select the repo. `render.yaml` configures everything.
+3. When prompted, set `GROQ_API_KEY`, `GEMINI_API_KEY`, and `GITHUB_TOKEN`.
+4. Open the generated `onrender.com` URL.
+
+Manual setup (without the blueprint):
+- **Build command**: `npm install --include=dev && npm run build`
+- **Start command**: `npm start`
+- **Health check path**: `/healthz`
+- **Environment**: `NODE_ENV=production`, plus the keys above.
+
+> **Free-tier cold starts:** Render free services sleep after inactivity and take roughly a minute to wake. Open the URL (or point a free uptime pinger at `/healthz`) a few minutes before a live demo.
+
+### Railway / any Node host
+Use the same build and start commands and the same environment variables.
+
+---
+
+## Troubleshooting
+
+- **AI features return an error**: open `/api/health`. If `llm.primary` is `none`, no API key is set on the host. If it shows a model, check that the model ID is valid for your account.
+- **"GitHub API rate limit reached"**: set `GITHUB_TOKEN`.
+- **429 "Too many requests"**: raise `RATE_LIMIT_PER_MIN`, or wait a minute. Groq's free tier also has its own per-organisation limits, in which case requests automatically fall back to Gemini.
+- **Build fails on the host with missing Vite/Tailwind**: make sure the build command uses `npm install --include=dev`.
 
 ---
 
