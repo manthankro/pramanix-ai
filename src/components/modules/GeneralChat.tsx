@@ -71,16 +71,19 @@ export const GeneralChat: React.FC<GeneralChatProps> = ({ currentProject }) => {
 
   const saveMessages = (nextMessages: ChatMessage[]) => {
     setSessions((previous) =>
-      previous.map((chat) => {
-        if (chat.id !== selectedChatId) return chat;
-        const firstQuestion = nextMessages.find((message) => message.role === "user")?.content;
-        return {
-          ...chat,
-          title: firstQuestion ? firstQuestion.slice(0, 42) + (firstQuestion.length > 42 ? "…" : "") : "New chat",
-          messages: nextMessages,
-          updatedAt: Date.now(),
-        };
-      })
+      previous
+        .map((chat) => {
+          if (chat.id !== selectedChatId) return chat;
+          const firstQuestion = nextMessages.find((message) => message.role === "user")?.content;
+          return {
+            ...chat,
+            title: firstQuestion ? firstQuestion.slice(0, 42) + (firstQuestion.length > 42 ? "…" : "") : "New chat",
+            messages: nextMessages,
+            updatedAt: Date.now(),
+          };
+        })
+        .sort((a, b) => b.updatedAt - a.updatedAt)
+        .slice(0, 30)
     );
   };
 
