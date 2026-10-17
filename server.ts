@@ -147,6 +147,7 @@ async function callGemini(prompt: string, systemInstruction?: string, temperatur
 }
 
 async function callGroq(prompt: string, systemInstruction: string, temperature: number) {
+  if (!process.env.GROQ_API_KEY) throw new Error("GROQ_API_KEY is not configured in Netlify environment variables.");
   const r = await fetch(GROQ_URL, {
     method: "POST",
     headers: {
@@ -211,7 +212,7 @@ async function callClaude(prompt: string, systemInstruction: string, temperature
       "anthropic-version": "2023-06-01",
     },
     body: JSON.stringify({
-      model: process.env.CLAUDE_MODEL || "claude-sonnet-4-20250514",
+      model: process.env.CLAUDE_MODEL || "claude-sonnet-4-6",
       max_tokens: 4096,
       temperature,
       system: systemInstruction,
