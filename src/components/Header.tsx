@@ -1,6 +1,7 @@
 import React from "react";
 import { Download, Sparkles, FolderGit2, Zap, Smartphone, Globe, Layers } from "lucide-react";
 import { ModuleId } from "../types";
+import { PramanixLogoIcon } from "./common/PramanixLogo";
 
 interface HeaderProps {
   currentModule: ModuleId;
@@ -80,6 +81,7 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="min-w-0 pr-4 flex items-center gap-4">
         <div>
           <div className="flex items-center gap-2.5">
+            <PramanixLogoIcon className="w-6 h-6 rounded" />
             <h1 className="text-sm font-semibold tracking-tight text-zinc-100 flex items-center gap-2">
               {meta.title}
             </h1>

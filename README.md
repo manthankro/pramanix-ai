@@ -1,8 +1,15 @@
-# 🚀 Pramanix — Dual Platform: Web Studio & Android Native App
+<div align="center">
+  <img src="public/pramanix-logo.jpeg" alt="Pramanix Logo" width="180" style="border-radius: 16px;" />
+  <h1>Pramanix — Engineering Mentor & Capstone Studio</h1>
+  <p><b>Comprehensive engineering mentor, GitHub repository analyzer, student project architect, and oral viva defense companion.</b></p>
+  <p>Available as a <b>High-Performance Web Platform</b> and a <b>Native Android Application</b>.</p>
+  <p>Created by <b>Manthan</b> (<a href="https://github.com/manthankro">@manthankro</a>) • Connected to <a href="https://github.com/manthankro/pramanix-ai-">manthankro/pramanix-ai-</a></p>
+</div>
 
-**Pramanix** is a university-grade engineering mentor, GitHub repository analyzer, student capstone project builder, and oral viva defense companion available both as a **High-Performance Web Studio** and a **Native Android Application**.
+---
 
-Powered by ultra-low-latency **Groq LPUs** (`openai/gpt-oss-120b`, ~180ms response time) with intelligent automated fallback to **Google Gemini Flash**.
+## ⚡ High-Speed Engine
+Powered by ultra-low-latency **Groq LPUs** (`openai/gpt-oss-120b`, ~180ms response time) delivering instant oral viva drill evaluation, algorithmic complexity audits, and real-time capstone architecture generation.
 
 ---
 
@@ -11,11 +18,11 @@ Powered by ultra-low-latency **Groq LPUs** (`openai/gpt-oss-120b`, ~180ms respon
 This repository is organized to provide production-ready builds for both platforms:
 
 ```
-├── src/                         # 🌐 Web Studio Platform (React 19, TypeScript, Tailwind CSS, Motion)
+├── src/                         # 🌐 Web Platform (React 19, TypeScript, Tailwind CSS, Motion)
 │   ├── components/              # Premium Glassmorphic UI modules & layouts
 │   ├── services/                # Unified API client & ZIP packager
 │   └── types/                   # Shared engineering domain types
-├── server.ts                    # ⚡ High-speed Node.js + Express backend with Groq & Gemini
+├── server.ts                    # ⚡ High-speed Node.js + Express backend with Groq LPUs
 ├── app/                         # 📱 Native Android App (Kotlin + Jetpack Compose)
 │   ├── build.gradle.kts         # Android module build configuration
 │   └── src/main/                # Compose UI, MVVM ViewModels, and Data Layer
@@ -83,7 +90,7 @@ This repository is organized to provide production-ready builds for both platfor
 
 ## 🚀 Running the Platforms
 
-### 🌐 1. Web Studio Platform
+### 🌐 1. Web Platform
 ```bash
 # Start development server
 npm run dev

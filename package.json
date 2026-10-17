@@ -1,5 +1,7 @@
 {
   "name": "pramanix-ai",
+  "description": "Comprehensive engineering mentor, GitHub repo analyzer, student project builder, viva simulator, and technical study workspace.",
+  "author": "Manthan (manthankro)",
   "private": true,
   "version": "1.0.0",
   "type": "module",
