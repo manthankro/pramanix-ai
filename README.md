@@ -193,10 +193,10 @@ AI responses use **Groq** by default. Gemini can be configured as an optional fa
 
 | Method | Endpoint | Description |
 |---|---|---|
-| `POST` | `/api/gemini/chat` | Chat with the mentor. Body: `{ messages, context?, mode? }` where `mode` is `general`, `viva`, `doubt` or `research` |
+| `POST` | `/api/gemini/chat` | Chat with the mentor. Body: `{ messages, context?, mode?, provider? }`; provider can be `groq`, `gemini`, `claude`, `grok` or `openai`. |
 | `POST` | `/api/gemini/analyze` | Specialised tasks. Body: `{ task, data }` for `project_builder`, `github_diagnose`, `code_review`, `viva_questions`, `notes_quiz_flashcards`, `resume_audit`, `compare_tech` |
 
-The `/api/gemini/*` paths keep their original names for compatibility; requests are answered by Groq first, then Gemini.
+The `/api/gemini/*` paths keep their original names for compatibility. General chat lets you choose Groq, Gemini, Claude, Grok, or ChatGPT. Add the matching provider key to your server environment before selecting it. Specialized engineering tools continue to use the configured Groq → Gemini fallback.
 
 ### GitHub proxy
 
@@ -264,6 +264,12 @@ Copy `.env.example` to `.env`:
 | `GROQ_MODEL` | No | Groq model ID (default `openai/gpt-oss-120b`). Verify at the Groq models page. |
 | `GEMINI_API_KEY` | Optional | Gemini API key. Fallback when Groq fails or is rate limited. |
 | `GEMINI_MODEL` | No | Gemini model ID (default `gemini-3.8-flash`). |
+| `ANTHROPIC_API_KEY` | Optional | Enables Claude in the chat model picker. |
+| `CLAUDE_MODEL` | No | Claude model ID (default `claude-sonnet-4-20250514`). |
+| `OPENAI_API_KEY` | Optional | Enables ChatGPT in the chat model picker. |
+| `OPENAI_MODEL` | No | OpenAI model ID (default `gpt-4.1-mini`). |
+| `XAI_API_KEY` | Optional | Enables Grok in the chat model picker. |
+| `XAI_MODEL` | No | xAI model ID (default `grok-4.6`). |
 | `GITHUB_TOKEN` | Recommended | Raises GitHub API limit from 60 to 5,000 requests/hour. No scopes needed. |
 | `PORT` | No | Server port (default `3000`). |
 | `NODE_ENV` | No | Set to `production` on your host. |
@@ -284,9 +290,10 @@ Netlify runs the Express API through a serverless function and serves the Vite b
    - `GROQ_API_KEY` — required for AI features.
    - `GROQ_MODEL` — optional; defaults to `openai/gpt-oss-120b`. Choose a model available to your Groq account.
    - `GITHUB_TOKEN` — recommended to avoid GitHub's low unauthenticated API limit.
+   - Optional: add `GEMINI_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, and/or `XAI_API_KEY` to enable those providers in the chat model picker. Each provider is billed and rate limited by its own service.
 4. Deploy, then open `/api/health`. It should report `llm.primary` as `groq:<model>`. Try a GitHub search and an AI action before presenting.
 
-Do not put provider keys in `netlify.toml` or frontend variables. Add them in Netlify's environment-variable settings so the function can read them at runtime. The app works with Groq alone; Gemini is an optional fallback only if you later configure `GEMINI_API_KEY`.
+Do not put provider keys in `netlify.toml` or frontend variables. Add them in Netlify's environment-variable settings so the function can read them at runtime. The app works with Groq alone. The model picker defaults to Groq; choosing Gemini, Claude, Grok, or ChatGPT requires the corresponding key above. Keys stay on the server and must never be placed in frontend variables.
 
 ### Render / Railway / any Node host
 
