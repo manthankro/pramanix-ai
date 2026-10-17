@@ -1,8 +1,9 @@
-import express from "express";
+import express, { Request, Response, NextFunction } from "express";
 import dotenv from "dotenv";
 import path from "path";
+import fs from "fs";
+import { Readable } from "stream";
 import { fileURLToPath } from "url";
-import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 
 dotenv.config();
@@ -13,9 +14,24 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
+// Production is enabled by NODE_ENV=production OR the --prod flag (used by `npm start`,
+// which keeps the start script cross-platform).
+const IS_PROD = process.env.NODE_ENV === "production" || process.argv.includes("--prod");
+
+// Behind Render/Railway/Netlify proxies, trust the first proxy so req.ip is the real client.
+app.set("trust proxy", 1);
 app.use(express.json({ limit: "25mb" }));
 
-// Initialize Google Gen AI
+/* -------------------------------------------------------------------------- */
+/*  Config                                                                    */
+/* -------------------------------------------------------------------------- */
+
+const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.8-flash";
+const GROQ_MODEL = process.env.GROQ_MODEL || "openai/gpt-oss-120b";
+const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
+const DEFAULT_REPO = process.env.DEFAULT_REPO || "manthankro/pramanix-ai-";
+const AI_RATE_LIMIT_PER_MIN = parseInt(process.env.RATE_LIMIT_PER_MIN || "60", 10);
+
 const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY || "",
   httpOptions: {
@@ -25,23 +41,181 @@ const ai = new GoogleGenAI({
   },
 });
 
-// Helper for Gemini text generation with error handling
+const DEFAULT_SYSTEM =
+  "You are Pramanix, an elite AI engineering mentor, student project architect, and technical educator. You provide rigorous, accurate, step-by-step guidance across Computer Science, Electronics, Electrical, Mechanical, and Civil Engineering.";
+
+/* -------------------------------------------------------------------------- */
+/*  Small utilities                                                           */
+/* -------------------------------------------------------------------------- */
+
+// Simple in-memory fixed-window rate limiter (no extra dependency).
+// Note: everyone on the same college Wi-Fi may share one public IP, so keep the limit generous.
+function rateLimit(opts: { windowMs: number; max: number }) {
+  const hits = new Map<string, { count: number; reset: number }>();
+  setInterval(() => {
+    const now = Date.now();
+    for (const [key, value] of hits) {
+      if (value.reset < now) hits.delete(key);
+    }
+  }, opts.windowMs).unref();
+
+  return (req: Request, res: Response, next: NextFunction) => {
+    const key = req.ip || "unknown";
+    const now = Date.now();
+    const entry = hits.get(key);
+    if (!entry || entry.reset < now) {
+      hits.set(key, { count: 1, reset: now + opts.windowMs });
+      return next();
+    }
+    if (entry.count >= opts.max) {
+      res.setHeader("Retry-After", String(Math.ceil((entry.reset - now) / 1000)));
+      return res.status(429).json({ error: "Too many requests. Please wait a moment and try again." });
+    }
+    entry.count++;
+    next();
+  };
+}
+
+// Accepts "owner/repo" or a GitHub URL (including /tree/branch suffixes) and validates it.
+function parseRepo(raw: string): { owner: string; repo: string } | null {
+  const cleaned = (raw || "")
+    .trim()
+    .replace(/^https?:\/\/github\.com\//, "")
+    .replace(/\.git$/, "");
+  const [owner, repo] = cleaned.split("/");
+  if (!owner || !repo) return null;
+  if (!/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$/.test(owner)) return null;
+  if (!/^[A-Za-z0-9._-]{1,100}$/.test(repo)) return null;
+  return { owner, repo };
+}
+
+function isSafeBranch(branch: string): boolean {
+  return /^[A-Za-z0-9._\/-]{1,100}$/.test(branch) && !branch.includes("..");
+}
+
+function isSafePath(p: string): boolean {
+  return p.length > 0 && p.length < 500 && !p.split("/").includes("..");
+}
+
+function ghHeaders(): Record<string, string> {
+  const headers: Record<string, string> = {
+    "User-Agent": "Pramanix-AI-Mentor",
+    Accept: "application/vnd.github.v3+json",
+  };
+  // Authenticated requests get 5,000 req/hr instead of 60 req/hr.
+  if (process.env.GITHUB_TOKEN) {
+    headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
+  }
+  return headers;
+}
+
+function githubErrorMessage(status: number, remaining: string | null): string {
+  if (status === 404) return "Repository not found. Check the owner/name and make sure it is public.";
+  if (status === 403 || status === 429) {
+    if (remaining === "0" || status === 429) {
+      return "GitHub API rate limit reached. Add a GITHUB_TOKEN environment variable or try again in a few minutes.";
+    }
+    return "GitHub denied access to this repository.";
+  }
+  return `GitHub API error (${status}).`;
+}
+
+// Models sometimes wrap JSON in prose or code fences; keep only the outermost JSON object.
+function extractJson(text: string): string {
+  const start = text.indexOf("{");
+  const end = text.lastIndexOf("}");
+  return start >= 0 && end > start ? text.slice(start, end + 1) : text;
+}
+
+/* -------------------------------------------------------------------------- */
+/*  LLM layer: Groq (fast) primary -> Gemini fallback                         */
+/* -------------------------------------------------------------------------- */
+
 async function callGemini(prompt: string, systemInstruction?: string, temperature = 0.7) {
   if (!process.env.GEMINI_API_KEY) {
     throw new Error("GEMINI_API_KEY is not configured in the environment.");
   }
   const response = await ai.models.generateContent({
-    model: "gemini-3.8-flash",
+    model: GEMINI_MODEL,
     contents: prompt,
     config: {
-      systemInstruction:
-        systemInstruction ||
-        "You are Pramanix, an elite AI engineering mentor, student project architect, and technical educator. You provide rigorous, accurate, step-by-step guidance across Computer Science, Electronics, Electrical, Mechanical, and Civil Engineering.",
+      systemInstruction: systemInstruction || DEFAULT_SYSTEM,
       temperature,
     },
   });
   return response.text || "";
 }
+
+async function callGroq(prompt: string, systemInstruction: string, temperature: number) {
+  const r = await fetch(GROQ_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: GROQ_MODEL,
+      temperature,
+      messages: [
+        { role: "system", content: systemInstruction },
+        { role: "user", content: prompt },
+      ],
+    }),
+    signal: AbortSignal.timeout(45_000),
+  });
+  if (!r.ok) {
+    throw new Error(`Groq ${r.status}: ${(await r.text()).slice(0, 300)}`);
+  }
+  const data: any = await r.json();
+  return data.choices?.[0]?.message?.content || "";
+}
+
+// Single entry point used by every route.
+async function callLLM(prompt: string, systemInstruction?: string, temperature = 0.7) {
+  const system = systemInstruction || DEFAULT_SYSTEM;
+  const hasGroq = !!process.env.GROQ_API_KEY;
+  const hasGemini = !!process.env.GEMINI_API_KEY;
+
+  if (!hasGroq && !hasGemini) {
+    throw new Error("No AI provider configured. Set GROQ_API_KEY and/or GEMINI_API_KEY.");
+  }
+
+  if (hasGroq) {
+    try {
+      return await callGroq(prompt, system, temperature);
+    } catch (err: any) {
+      console.warn(`[LLM] Groq failed (${err.message}).${hasGemini ? " Falling back to Gemini." : ""}`);
+      if (!hasGemini) throw err;
+    }
+  }
+  return callGemini(prompt, system, temperature);
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Health                                                                    */
+/* -------------------------------------------------------------------------- */
+
+app.get("/healthz", (_req, res) => {
+  res.type("text/plain").send("ok");
+});
+
+app.get("/api/health", (_req, res) => {
+  res.json({
+    ok: true,
+    uptimeSeconds: Math.round(process.uptime()),
+    llm: {
+      primary: process.env.GROQ_API_KEY ? `groq:${GROQ_MODEL}` : process.env.GEMINI_API_KEY ? `gemini:${GEMINI_MODEL}` : "none",
+      fallback: process.env.GROQ_API_KEY && process.env.GEMINI_API_KEY ? `gemini:${GEMINI_MODEL}` : "none",
+    },
+    github: { tokenConfigured: !!process.env.GITHUB_TOKEN },
+  });
+});
+
+/* -------------------------------------------------------------------------- */
+/*  AI routes (paths kept as /api/gemini/* so the frontend needs no changes)  */
+/* -------------------------------------------------------------------------- */
+
+app.use("/api/gemini", rateLimit({ windowMs: 60_000, max: AI_RATE_LIMIT_PER_MIN }));
 
 // 1. General AI Assistant / Chat Route
 app.post("/api/gemini/chat", async (req, res) => {
@@ -63,19 +237,24 @@ app.post("/api/gemini/chat", async (req, res) => {
 
     let formattedPrompt = "";
     if (context) {
-      formattedPrompt += `[CURRENT WORKSPACE / REPO CONTEXT]:\n${context}\n\n`;
+      formattedPrompt += `[CURRENT WORKSPACE / REPO CONTEXT]:\n${String(context).slice(0, 20000)}\n\n`;
     }
 
     if (Array.isArray(messages) && messages.length > 0) {
+      // Keep only the most recent turns so long chats stay inside token limits.
       const historyStr = messages
-        .map((m: { role: string; content: string }) => `${m.role === "user" ? "Student" : "Pramanix"}: ${m.content}`)
+        .slice(-20)
+        .map(
+          (m: { role: string; content: string }) =>
+            `${m.role === "user" ? "Student" : "Pramanix"}: ${String(m.content ?? "").slice(0, 8000)}`
+        )
         .join("\n\n");
       formattedPrompt += `Conversation History:\n${historyStr}\n\nPramanix:`;
     } else {
       formattedPrompt += (req.body.prompt as string) || "Hello Pramanix, introduce your capabilities.";
     }
 
-    const reply = await callGemini(formattedPrompt, systemInstruction);
+    const reply = await callLLM(formattedPrompt, systemInstruction);
     res.json({ reply });
   } catch (error: any) {
     console.error("Chat API error:", error);
@@ -86,13 +265,23 @@ app.post("/api/gemini/chat", async (req, res) => {
 // 2. Specialized Task Analyzer (Project Builder, Viva Generator, Code Review, etc.)
 app.post("/api/gemini/analyze", async (req, res) => {
   try {
-    const { task, data } = req.body;
+    const task = req.body?.task as string;
+    const data = req.body?.data || {};
 
     let prompt = "";
     let systemInstruction = "You are Pramanix, the AI engineering mentor.";
 
+    const requireField = (value: unknown, label: string) => {
+      if (typeof value !== "string" || !value.trim()) {
+        const err: any = new Error(`Missing required field: ${label}`);
+        err.status = 400;
+        throw err;
+      }
+    };
+
     switch (task) {
       case "project_builder":
+        requireField(data.idea, "idea");
         systemInstruction =
           "You are a chief technical architect and university project evaluator. Create a complete, production-grade Software Requirements & Execution plan.";
         prompt = `Generate a full project specification for a student project with the following details:
@@ -130,6 +319,7 @@ Provide:
         break;
 
       case "code_review":
+        requireField(data.code, "code");
         systemInstruction =
           "You are a principal engineer conducting a thorough code review and algorithm audit.";
         prompt = `Review the following code snippet:
@@ -137,7 +327,7 @@ Language: ${data.language || "auto-detect"}
 Goal/Description: ${data.description || "General optimization and bug check"}
 Code:
 \`\`\`${data.language || ""}
-${data.code}
+${String(data.code).slice(0, 12000)}
 \`\`\`
 
 Provide:
@@ -148,6 +338,7 @@ Provide:
         break;
 
       case "viva_questions":
+        requireField(data.topic, "topic");
         systemInstruction =
           "You are a strict external university examiner preparing viva questions for engineering students.";
         prompt = `Generate 5 deep viva-voce questions and grading rubrics for:
@@ -163,11 +354,12 @@ For each question:
         break;
 
       case "notes_quiz_flashcards":
+        requireField(data.content, "content");
         systemInstruction =
           "You are an engineering educator. Generate structured study aids (revision summary, 5 flashcards, and 4 multiple-choice questions) in JSON format.";
         prompt = `Analyze the following engineering lecture notes/study material:
 ---
-${data.content.slice(0, 6000)}
+${String(data.content).slice(0, 6000)}
 ---
 
 Respond ONLY with valid JSON with this exact structure:
@@ -188,12 +380,13 @@ Respond ONLY with valid JSON with this exact structure:
         break;
 
       case "resume_audit":
+        requireField(data.resumeText, "resumeText");
         systemInstruction =
           "You are an engineering hiring manager and ATS resume specialist at top tech companies.";
         prompt = `Analyze this engineering student's resume/profile:
 Target Role: ${data.targetRole || "Software Engineer / System Engineer"}
 Resume Text / Projects:
-${data.resumeText}
+${String(data.resumeText).slice(0, 12000)}
 
 Provide:
 1. ATS Score Estimate (0-100) and Readability breakdown
@@ -204,6 +397,8 @@ Provide:
         break;
 
       case "compare_tech":
+        requireField(data.techA, "techA");
+        requireField(data.techB, "techB");
         systemInstruction =
           "You are a technical research fellow. Provide a balanced, citation-backed technical comparison.";
         prompt = `Compare the following technologies/architectures:
@@ -223,110 +418,81 @@ Provide:
         prompt = data.prompt || "Explain engineering principles.";
     }
 
-    const result = await callGemini(prompt, systemInstruction);
+    let result = await callLLM(prompt, systemInstruction);
+    if (task === "notes_quiz_flashcards") {
+      result = extractJson(result);
+    }
     res.json({ result });
   } catch (error: any) {
     console.error("Analyze API error:", error);
-    res.status(500).json({ error: error.message || "Failed to analyze request" });
+    res.status(error.status || 500).json({ error: error.message || "Failed to analyze request" });
   }
 });
+
+/* -------------------------------------------------------------------------- */
+/*  GitHub proxy routes                                                       */
+/* -------------------------------------------------------------------------- */
 
 // 3. GitHub Public Repository API Proxy
 app.get("/api/github/repo", async (req, res) => {
   try {
-    const rawRepo = (req.query.repo as string) || "manthankro/pramanix";
-    const cleanedRepo = rawRepo
-      .replace(/^https?:\/\/github\.com\//, "")
-      .replace(/\.git$/, "")
-      .trim();
-
-    const [owner, repo] = cleanedRepo.split("/");
-    if (!owner || !repo) {
-      return res.status(400).json({ error: "Invalid repository format. Use 'owner/repo' or GitHub URL." });
+    const parsed = parseRepo((req.query.repo as string) || DEFAULT_REPO);
+    if (!parsed) {
+      return res.status(400).json({ error: "Invalid repository format. Use 'owner/repo' or a GitHub URL." });
     }
-
-    const headers: Record<string, string> = {
-      "User-Agent": "Pramanix-AI-Mentor",
-      Accept: "application/vnd.github.v3+json",
-    };
+    const { owner, repo } = parsed;
+    const headers = ghHeaders();
 
     // 1. Fetch metadata
     const repoRes = await fetch(`https://api.github.com/repos/${owner}/${repo}`, { headers });
     if (!repoRes.ok) {
-      if (cleanedRepo.toLowerCase() === "manthankro/pramanix" || repoRes.status === 403) {
-        return res.json({
-          name: repo,
-          fullName: `${owner}/${repo}`,
-          description: "Comprehensive engineering mentor, GitHub repo analyzer, student project builder, viva simulator, and technical study workspace.",
-          stars: 48,
-          forks: 12,
-          openIssues: 3,
-          language: "Python",
-          defaultBranch: "main",
-          htmlUrl: `https://github.com/${owner}/${repo}`,
-          zipUrl: `https://codeload.github.com/${owner}/${repo}/zip/refs/heads/main`,
-          archiveUrl: `https://github.com/${owner}/${repo}/archive/refs/heads/main.zip`,
-          readme: `# Pramanix System Architecture\n\nAI engineering mentor, GitHub repo analyzer, and student project workspace.\n\n## Quick Start\n\`\`\`bash\ngit clone https://github.com/${owner}/${repo}.git\ncd ${repo}\npip install -r requirements.txt\npython main.py\n\`\`\`\n`,
-          files: [
-            { path: "main.py", type: "file", size: 1420 },
-            { path: "Dockerfile", type: "file", size: 480 },
-            { path: "docker-compose.yml", type: "file", size: 620 },
-            { path: "pyproject.toml", type: "file", size: 890 },
-            { path: "README.md", type: "file", size: 2150 },
-            { path: "src/core/engine.py", type: "file", size: 3400 },
-            { path: "src/models/schema.py", type: "file", size: 1980 },
-            { path: "tests/test_viva.py", type: "file", size: 2200 },
-          ],
-          owner: {
-            login: owner,
-            avatarUrl: `https://github.com/${owner}.png`,
-          },
-        });
-      }
-      const errText = await repoRes.text();
       return res.status(repoRes.status).json({
-        error: `GitHub API error (${repoRes.status}): ${errText}`,
+        error: githubErrorMessage(repoRes.status, repoRes.headers.get("x-ratelimit-remaining")),
         owner,
         repo,
       });
     }
-    const repoData = await repoRes.json();
+    const repoData: any = await repoRes.json();
     const defaultBranch = repoData.default_branch || "main";
 
-    // 2. Fetch README (optional)
-    let readmeContent = "";
-    try {
-      const readmeRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/readme`, { headers });
-      if (readmeRes.ok) {
-        const readmeData = await readmeRes.json();
-        if (readmeData.content) {
-          readmeContent = Buffer.from(readmeData.content, "base64").toString("utf-8");
+    // 2. Fetch README and Git tree in parallel (both optional)
+    const [readmeContent, files] = await Promise.all([
+      (async () => {
+        try {
+          const readmeRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/readme`, { headers });
+          if (readmeRes.ok) {
+            const readmeData: any = await readmeRes.json();
+            if (readmeData.content) {
+              return Buffer.from(readmeData.content, "base64").toString("utf-8");
+            }
+          }
+        } catch (e) {
+          console.warn("Failed to fetch README:", e);
         }
-      }
-    } catch (e) {
-      console.warn("Failed to fetch README:", e);
-    }
-
-    // 3. Fetch Git tree
-    let files: Array<{ path: string; type: string; size?: number }> = [];
-    try {
-      const treeRes = await fetch(
-        `https://api.github.com/repos/${owner}/${repo}/git/trees/${defaultBranch}?recursive=1`,
-        { headers }
-      );
-      if (treeRes.ok) {
-        const treeData = await treeRes.json();
-        if (Array.isArray(treeData.tree)) {
-          files = treeData.tree.map((item: any) => ({
-            path: item.path,
-            type: item.type === "tree" ? "dir" : "file",
-            size: item.size,
-          }));
+        return "";
+      })(),
+      (async () => {
+        try {
+          const treeRes = await fetch(
+            `https://api.github.com/repos/${owner}/${repo}/git/trees/${encodeURIComponent(defaultBranch)}?recursive=1`,
+            { headers }
+          );
+          if (treeRes.ok) {
+            const treeData: any = await treeRes.json();
+            if (Array.isArray(treeData.tree)) {
+              return treeData.tree.map((item: any) => ({
+                path: item.path,
+                type: item.type === "tree" ? "dir" : "file",
+                size: item.size,
+              })) as Array<{ path: string; type: string; size?: number }>;
+            }
+          }
+        } catch (e) {
+          console.warn("Failed to fetch Git tree:", e);
         }
-      }
-    } catch (e) {
-      console.warn("Failed to fetch Git tree:", e);
-    }
+        return [] as Array<{ path: string; type: string; size?: number }>;
+      })(),
+    ]);
 
     // Direct download links
     const zipUrl = `https://codeload.github.com/${owner}/${repo}/zip/refs/heads/${defaultBranch}`;
@@ -360,22 +526,22 @@ app.get("/api/github/repo", async (req, res) => {
 // 4. GitHub File Content Fetcher
 app.get("/api/github/file", async (req, res) => {
   try {
-    const rawRepo = (req.query.repo as string) || "manthankro/pramanix";
+    const parsed = parseRepo((req.query.repo as string) || DEFAULT_REPO);
     const filePath = (req.query.path as string) || "README.md";
     const branch = (req.query.branch as string) || "main";
 
-    const cleanedRepo = rawRepo
-      .replace(/^https?:\/\/github\.com\//, "")
-      .replace(/\.git$/, "")
-      .trim();
+    if (!parsed) return res.status(400).json({ error: "Invalid repository identifier." });
+    if (!isSafeBranch(branch)) return res.status(400).json({ error: "Invalid branch name." });
+    if (!isSafePath(filePath)) return res.status(400).json({ error: "Invalid file path." });
 
-    const rawUrl = `https://raw.githubusercontent.com/${cleanedRepo}/${branch}/${filePath}`;
+    const encodedPath = filePath.split("/").map(encodeURIComponent).join("/");
+    const rawUrl = `https://raw.githubusercontent.com/${parsed.owner}/${parsed.repo}/${branch}/${encodedPath}`;
     const fileRes = await fetch(rawUrl, {
       headers: { "User-Agent": "Pramanix-AI-Mentor" },
     });
 
     if (!fileRes.ok) {
-      return res.status(fileRes.status).json({ error: `File not found at ${rawUrl}` });
+      return res.status(fileRes.status).json({ error: `File not found: ${filePath}` });
     }
 
     const content = await fileRes.text();
@@ -385,107 +551,91 @@ app.get("/api/github/file", async (req, res) => {
   }
 });
 
-// 5. GitHub Direct ZIP proxy download
+// 5. GitHub Direct ZIP proxy download (streamed, not buffered in memory)
 app.get("/api/github/download-zip", async (req, res) => {
   try {
-    const rawRepo = (req.query.repo as string) || "manthankro/pramanix";
+    const parsed = parseRepo((req.query.repo as string) || DEFAULT_REPO);
     const branch = (req.query.branch as string) || "main";
+    if (!parsed) return res.status(400).send("Invalid repository identifier.");
+    if (!isSafeBranch(branch)) return res.status(400).send("Invalid branch name.");
 
-    const cleanedRepo = rawRepo
-      .replace(/^https?:\/\/github\.com\//, "")
-      .replace(/\.git$/, "")
-      .trim();
-
-    const [owner, repo] = cleanedRepo.split("/");
-    if (!owner || !repo) {
-      return res.status(400).send("Invalid repository identifier.");
-    }
-
+    const { owner, repo } = parsed;
     const zipUrl = `https://codeload.github.com/${owner}/${repo}/zip/refs/heads/${branch}`;
     const zipRes = await fetch(zipUrl, {
       headers: { "User-Agent": "Pramanix-AI-Mentor" },
     });
 
-    if (!zipRes.ok) {
+    if (!zipRes.ok || !zipRes.body) {
       // Fallback redirect
       return res.redirect(`https://github.com/${owner}/${repo}/archive/refs/heads/${branch}.zip`);
     }
 
     res.setHeader("Content-Type", "application/zip");
-    res.setHeader("Content-Disposition", `attachment; filename="${repo}-${branch}.zip"`);
+    res.setHeader("Content-Disposition", `attachment; filename="${repo}-${branch.replace(/\//g, "-")}.zip"`);
 
-    const arrayBuffer = await zipRes.arrayBuffer();
-    res.send(Buffer.from(arrayBuffer));
+    const stream = Readable.fromWeb(zipRes.body as any);
+    stream.on("error", (err) => {
+      console.error("ZIP stream error:", err);
+      res.destroy(err);
+    });
+    stream.pipe(res);
   } catch (error: any) {
     console.error("ZIP download error:", error);
-    res.status(500).send("Failed to download ZIP archive: " + error.message);
+    if (!res.headersSent) res.status(500).send("Failed to download ZIP archive: " + error.message);
   }
 });
 
 // 6. GitHub Repository Insights (Languages, Commits, Contributors)
 app.get("/api/github/insights", async (req, res) => {
   try {
-    const rawRepo = (req.query.repo as string) || "manthankro/pramanix";
-    const cleanedRepo = rawRepo
-      .replace(/^https?:\/\/github\.com\//, "")
-      .replace(/\.git$/, "")
-      .trim();
-
-    const [owner, repo] = cleanedRepo.split("/");
-    if (!owner || !repo) {
+    const parsed = parseRepo((req.query.repo as string) || DEFAULT_REPO);
+    if (!parsed) {
       return res.status(400).json({ error: "Invalid repository identifier." });
     }
+    const { owner, repo } = parsed;
+    const headers = ghHeaders();
 
-    const headers: Record<string, string> = {
-      "User-Agent": "Pramanix-AI-Mentor",
-      Accept: "application/vnd.github.v3+json",
-    };
-
-    // 1. Languages
-    let languages: Record<string, number> = {};
-    try {
-      const langRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/languages`, { headers });
-      if (langRes.ok) {
-        languages = await langRes.json();
-      }
-    } catch (e) {
-      console.warn("Failed to fetch languages:", e);
-    }
-
-    // 2. Contributors
-    let contributors: Array<{ login: string; contributions: number; avatar_url: string; html_url: string }> = [];
-    try {
-      const contribRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/contributors?per_page=10`, { headers });
-      if (contribRes.ok) {
-        contributors = await contribRes.json();
-      }
-    } catch (e) {
-      console.warn("Failed to fetch contributors:", e);
-    }
-
-    // 3. Commits
-    let commits: Array<{ date: string; message: string; author: string }> = [];
-    try {
-      const commitsRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/commits?per_page=50`, { headers });
-      if (commitsRes.ok) {
-        const rawCommits = await commitsRes.json();
-        if (Array.isArray(rawCommits)) {
-          commits = rawCommits.map((c: any) => ({
-            date: c.commit?.author?.date || c.commit?.committer?.date || "",
-            message: c.commit?.message?.split("\n")[0] || "",
-            author: c.commit?.author?.name || c.author?.login || "Contributor",
-          }));
+    // Fetch languages, contributors and commits in parallel; each is optional.
+    const [languages, contributors, commits] = await Promise.all([
+      (async () => {
+        try {
+          const r = await fetch(`https://api.github.com/repos/${owner}/${repo}/languages`, { headers });
+          if (r.ok) return (await r.json()) as Record<string, number>;
+        } catch (e) {
+          console.warn("Failed to fetch languages:", e);
         }
-      }
-    } catch (e) {
-      console.warn("Failed to fetch commits:", e);
-    }
+        return {} as Record<string, number>;
+      })(),
+      (async () => {
+        try {
+          const r = await fetch(`https://api.github.com/repos/${owner}/${repo}/contributors?per_page=10`, { headers });
+          if (r.ok) return (await r.json()) as Array<{ login: string; contributions: number; avatar_url: string; html_url: string }>;
+        } catch (e) {
+          console.warn("Failed to fetch contributors:", e);
+        }
+        return [] as Array<{ login: string; contributions: number; avatar_url: string; html_url: string }>;
+      })(),
+      (async () => {
+        try {
+          const r = await fetch(`https://api.github.com/repos/${owner}/${repo}/commits?per_page=50`, { headers });
+          if (r.ok) {
+            const rawCommits: any = await r.json();
+            if (Array.isArray(rawCommits)) {
+              return rawCommits.map((c: any) => ({
+                date: c.commit?.author?.date || c.commit?.committer?.date || "",
+                message: c.commit?.message?.split("\n")[0] || "",
+                author: c.commit?.author?.name || c.author?.login || "Contributor",
+              })) as Array<{ date: string; message: string; author: string }>;
+            }
+          }
+        } catch (e) {
+          console.warn("Failed to fetch commits:", e);
+        }
+        return [] as Array<{ date: string; message: string; author: string }>;
+      })(),
+    ]);
 
-    res.json({
-      languages,
-      contributors,
-      commits,
-    });
+    res.json({ languages, contributors, commits });
   } catch (error: any) {
     console.error("GitHub Insights error:", error);
     res.status(500).json({ error: error.message || "Failed to load insights" });
@@ -495,25 +645,21 @@ app.get("/api/github/insights", async (req, res) => {
 // 7. GitHub Repository Search API (by repo name or owner)
 app.get("/api/github/search", async (req, res) => {
   try {
-    const query = ((req.query.q as string) || "").trim();
+    const query = ((req.query.q as string) || "").trim().slice(0, 200);
     if (!query) {
       return res.json({ totalCount: 0, items: [] });
     }
 
-    const headers: Record<string, string> = {
-      "User-Agent": "Pramanix-AI-Mentor",
-      Accept: "application/vnd.github.v3+json",
-    };
-
     const searchUrl = `https://api.github.com/search/repositories?q=${encodeURIComponent(query)}&sort=stars&per_page=12`;
-    const searchRes = await fetch(searchUrl, { headers });
+    const searchRes = await fetch(searchUrl, { headers: ghHeaders() });
 
     if (!searchRes.ok) {
-      const errText = await searchRes.text();
-      return res.status(searchRes.status).json({ error: `GitHub search failed: ${errText}` });
+      return res.status(searchRes.status).json({
+        error: githubErrorMessage(searchRes.status, searchRes.headers.get("x-ratelimit-remaining")),
+      });
     }
 
-    const searchData = await searchRes.json();
+    const searchData: any = await searchRes.json();
     const items = (searchData.items || []).map((repo: any) => ({
       id: repo.id,
       fullName: repo.full_name,
@@ -539,11 +685,19 @@ app.get("/api/github/search", async (req, res) => {
   }
 });
 
-// Initialize Vite in dev mode or serve static files in prod
-async function startServer() {
-  const isProd = process.env.NODE_ENV === "production";
+// Unknown API routes return JSON 404 instead of the SPA's index.html.
+app.use("/api", (_req, res) => {
+  res.status(404).json({ error: "Not found" });
+});
 
-  if (!isProd) {
+/* -------------------------------------------------------------------------- */
+/*  Frontend: Vite middleware in dev, static dist/ in production              */
+/* -------------------------------------------------------------------------- */
+
+async function startServer() {
+  if (!IS_PROD) {
+    // Imported lazily so production never loads Vite.
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
@@ -551,16 +705,35 @@ async function startServer() {
     app.use(vite.middlewares);
   } else {
     const distPath = path.resolve(__dirname, "dist");
-    app.use(express.static(distPath));
+    if (!fs.existsSync(path.join(distPath, "index.html"))) {
+      throw new Error("dist/index.html not found. Run `npm run build` before starting in production.");
+    }
+    app.use(express.static(distPath, { maxAge: "1h" }));
     app.get("*", (_req, res) => {
       res.sendFile(path.resolve(distPath, "index.html"));
     });
   }
 
+  // Global error handler (bad JSON, oversized payloads, etc.)
+  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+    const status = err.status || err.statusCode || 500;
+    if (status >= 500) console.error("Unhandled error:", err);
+    res.status(status).json({ error: status === 413 ? "Request is too large." : err.message || "Internal server error" });
+  });
+
   app.listen(PORT, "0.0.0.0", () => {
-    console.log(`[Pramanix Server] running on http://0.0.0.0:${PORT} (env: ${process.env.NODE_ENV || "development"})`);
+    console.log(`[Pramanix Server] running on http://0.0.0.0:${PORT} (env: ${IS_PROD ? "production" : "development"})`);
+    console.log(
+      `[Pramanix Server] LLM primary: ${
+        process.env.GROQ_API_KEY ? `groq:${GROQ_MODEL}` : process.env.GEMINI_API_KEY ? `gemini:${GEMINI_MODEL}` : "NONE CONFIGURED"
+      }`
+    );
   });
 }
+
+process.on("unhandledRejection", (reason) => {
+  console.error("Unhandled promise rejection:", reason);
+});
 
 startServer().catch((err) => {
   console.error("Fatal server error:", err);

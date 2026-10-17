@@ -1,0 +1,27 @@
+# Render Blueprint: deploys the whole app (Express API + built React frontend)
+# as ONE web service. In Render: New > Blueprint > pick this repo.
+services:
+  - type: web
+    name: pramanix-ai
+    runtime: node
+    plan: free
+    # --include=dev is required because NODE_ENV=production makes npm skip
+    # devDependencies, and the Vite/Tailwind build needs them.
+    buildCommand: npm install --include=dev && npm run build
+    startCommand: npm start
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NODE_ENV
+        value: production
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GROQ_MODEL
+        value: openai/gpt-oss-120b
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-3.8-flash
+      - key: GITHUB_TOKEN
+        sync: false
