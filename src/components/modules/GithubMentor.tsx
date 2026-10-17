@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   Github,
   Download,
@@ -37,7 +37,7 @@ interface GithubMentorProps {
 }
 
 export const GithubMentor: React.FC<GithubMentorProps> = ({ onConnectRepoToWorkspace }) => {
-  const [repoInput, setRepoInput] = useState("manthankro/pramanix-ai-");
+  const [repoInput, setRepoInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [repoData, setRepoData] = useState<RepoData | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -68,11 +68,6 @@ export const GithubMentor: React.FC<GithubMentorProps> = ({ onConnectRepoToWorks
   const [errorLogInput, setErrorLogInput] = useState("");
   const [diagnosticResult, setDiagnosticResult] = useState<string>("");
   const [diagnosing, setDiagnosing] = useState(false);
-
-  // Load initial repo
-  useEffect(() => {
-    loadRepo("manthankro/pramanix-ai-");
-  }, []);
 
   const loadInsights = async (target: string) => {
     setLoadingInsights(true);
@@ -193,14 +188,39 @@ export const GithubMentor: React.FC<GithubMentorProps> = ({ onConnectRepoToWorks
     setDebounceTimer(timer);
   };
 
+  const handleSearchSubmit = async () => {
+    const query = repoInput.trim();
+    if (!query || loading) return;
+    if (query.includes("/") || query.includes("github.com/")) {
+      setShowDropdown(false);
+      loadRepo(query);
+      return;
+    }
+    setShowDropdown(true);
+    setIsSearching(true);
+    try {
+      const response = await searchGitHubRepos(query);
+      setSearchResults(response.items || []);
+    } catch (err: any) {
+      setError(err.message || "GitHub topic search failed");
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
   const handleSelectRepo = (fullName: string) => {
     setRepoInput(fullName);
     setShowDropdown(false);
+    setActiveTab("overview");
     loadRepo(fullName);
   };
 
   return (
     <div className="h-full flex flex-col bg-zinc-950 text-zinc-200 overflow-hidden">
+      <div className="px-6 pt-5 pb-3 shrink-0">
+        <h2 className="text-lg font-semibold text-white">Find a GitHub project to learn from</h2>
+        <p className="mt-1 text-sm text-zinc-400">Search a topic, choose a public repo, and get a beginner-friendly guide to what it does and how to explore it.</p>
+      </div>
       {/* Search and control bar */}
       <div className="p-4 bg-zinc-900/60 border-b border-zinc-800 flex flex-wrap items-center justify-between gap-3 shrink-0">
         <div className="flex items-center gap-2 flex-1 max-w-2xl relative">
@@ -218,12 +238,12 @@ export const GithubMentor: React.FC<GithubMentorProps> = ({ onConnectRepoToWorks
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   setShowDropdown(false);
-                  loadRepo(repoInput);
+                  handleSearchSubmit();
                 } else if (e.key === "Escape") {
                   setShowDropdown(false);
                 }
               }}
-              placeholder="Search repositories by name, owner (e.g. pramanix, manthankro) or GitHub URL..."
+              placeholder="Search by topic (e.g. machine learning, study planner) or enter owner/repository..."
               className="w-full pl-9 pr-8 py-1.5 bg-zinc-950 border border-zinc-700/80 rounded text-xs text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-emerald-500 font-mono"
             />
             {repoInput && (
@@ -243,13 +263,13 @@ export const GithubMentor: React.FC<GithubMentorProps> = ({ onConnectRepoToWorks
           <button
             onClick={() => {
               setShowDropdown(false);
-              loadRepo(repoInput);
+              handleSearchSubmit();
             }}
             disabled={loading || !repoInput.trim()}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-xs font-medium transition cursor-pointer disabled:opacity-60 shrink-0"
           >
             {loading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <FolderGit2 className="w-3.5 h-3.5" />}
-            <span>Analyze Repo</span>
+            <span>{repoInput.includes("/") || repoInput.includes("github.com/") ? "Open student guide" : "Search GitHub"}</span>
           </button>
 
           {/* Autocomplete Search Dropdown */}
@@ -314,7 +334,7 @@ export const GithubMentor: React.FC<GithubMentorProps> = ({ onConnectRepoToWorks
                         }}
                         className="px-2.5 py-1 bg-zinc-800 group-hover:bg-emerald-600 text-zinc-200 group-hover:text-white rounded text-[11px] font-medium transition shrink-0"
                       >
-                        Inspect
+                        Open guide
                       </button>
                     </div>
                   ))
@@ -350,6 +370,29 @@ export const GithubMentor: React.FC<GithubMentorProps> = ({ onConnectRepoToWorks
           </div>
         )}
       </div>
+
+      {!repoData && !loading && !error && (
+        <div className="flex-1 overflow-y-auto p-6">
+          <div className="mx-auto mt-8 max-w-3xl rounded-2xl border border-zinc-800 bg-zinc-900/50 p-8">
+            <div className="text-xs font-semibold uppercase tracking-wider text-emerald-400">Start exploring</div>
+            <h3 className="mt-2 text-xl font-semibold text-white">Learn from real student projects</h3>
+            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-zinc-400">
+              Search for a topic such as “AI chatbot”, “weather app”, or “plant disease detection”. Pick a repository from the results to read its student guide, setup notes, and file map.
+            </p>
+            <div className="mt-5 flex flex-wrap gap-2">
+              {["machine learning", "student management system", "portfolio website"].map((topic) => (
+                <button
+                  key={topic}
+                  onClick={() => { setRepoInput(topic); setShowDropdown(true); setTimeout(() => void handleSearchSubmit(), 0); }}
+                  className="rounded-full border border-zinc-700 bg-zinc-950 px-3 py-1.5 text-xs text-zinc-300 hover:border-emerald-500/60 hover:text-white"
+                >
+                  {topic}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {error && (
         <div className="p-3 mx-4 mt-3 bg-red-950/40 border border-red-800/80 rounded text-xs text-red-300 flex items-center justify-between">
@@ -399,7 +442,7 @@ export const GithubMentor: React.FC<GithubMentorProps> = ({ onConnectRepoToWorks
                   activeTab === "overview" ? "bg-zinc-800 text-zinc-100" : "text-zinc-400 hover:text-zinc-200"
                 }`}
               >
-                Architecture Audit
+                Student Guide
               </button>
               <button
                 onClick={() => setActiveTab("insights")}
@@ -506,7 +549,7 @@ export const GithubMentor: React.FC<GithubMentorProps> = ({ onConnectRepoToWorks
                   <div className="flex items-center justify-between pb-3 border-b border-zinc-800 mb-4">
                     <h3 className="text-sm font-semibold text-zinc-100 flex items-center gap-2">
                       <Sparkles className="w-4 h-4 text-emerald-400" />
-                      Pramanix Architecture & Code Audit for {repoData.fullName}
+                      Student-friendly guide to {repoData.fullName}
                     </h3>
                     <span className="text-[11px] text-zinc-500 font-mono">Grounded on file tree & README</span>
                   </div>
