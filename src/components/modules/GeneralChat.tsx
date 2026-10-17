@@ -196,6 +196,14 @@ export const GeneralChat: React.FC<GeneralChatProps> = ({ currentProject }) => {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <select
+              value={selectedChatId}
+              onChange={(event) => setActiveChatId(event.target.value)}
+              className="md:hidden max-w-[130px] rounded-lg border border-zinc-700 bg-zinc-900 px-2 py-2 text-[11px] text-zinc-200"
+              aria-label="Recent chats"
+            >
+              {sessions.map((chat) => <option key={chat.id} value={chat.id}>{chat.title}</option>)}
+            </select>
             <label className="text-xs text-zinc-400" htmlFor="chat-provider">Model</label>
             <select
               id="chat-provider"
