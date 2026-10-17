@@ -245,10 +245,11 @@ export default function App() {
           currentModule={currentModule}
           onDownloadZip={handleDownloadPramanixZip}
           isDownloadingZip={isDownloadingZip}
+          activeProjectName={activeProject?.name}
         />
 
         {/* Dynamic Module Body */}
-        <main className="flex-1 overflow-hidden relative">
+        <main className="flex-1 overflow-hidden relative bg-gradient-to-br from-zinc-950 via-zinc-900/30 to-zinc-950">
           {currentModule === "github" && (
             <GithubMentor onConnectRepoToWorkspace={(repo) => console.log(repo)} />
           )}

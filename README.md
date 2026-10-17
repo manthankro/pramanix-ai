@@ -1,6 +1,29 @@
-# Pramanix - AI Engineering Mentor & Project Workspace (Android)
+# 🚀 Pramanix — Dual Platform: Web Studio & Android Native App
 
-**Pramanix** is a university-grade engineering mentor, GitHub repository analyzer, student capstone project builder, and oral viva defense companion for Android built with Kotlin and Jetpack Compose.
+**Pramanix** is a university-grade engineering mentor, GitHub repository analyzer, student capstone project builder, and oral viva defense companion available both as a **High-Performance Web Studio** and a **Native Android Application**.
+
+Powered by ultra-low-latency **Groq LPUs** (`openai/gpt-oss-120b`, ~180ms response time) with intelligent automated fallback to **Google Gemini Flash**.
+
+---
+
+## 🏛️ Unified Architecture: Web + Android
+
+This repository is organized to provide production-ready builds for both platforms:
+
+```
+├── src/                         # 🌐 Web Studio Platform (React 19, TypeScript, Tailwind CSS, Motion)
+│   ├── components/              # Premium Glassmorphic UI modules & layouts
+│   ├── services/                # Unified API client & ZIP packager
+│   └── types/                   # Shared engineering domain types
+├── server.ts                    # ⚡ High-speed Node.js + Express backend with Groq & Gemini
+├── app/                         # 📱 Native Android App (Kotlin + Jetpack Compose)
+│   ├── build.gradle.kts         # Android module build configuration
+│   └── src/main/                # Compose UI, MVVM ViewModels, and Data Layer
+├── build.gradle.kts             # Root Gradle build script
+├── settings.gradle.kts          # Gradle multi-project setup
+├── gradle/libs.versions.toml    # Version catalog for Android dependencies
+└── package.json                 # Web runtime & deployment scripts
+```
 
 ---
 
@@ -8,21 +31,21 @@
 
 1. **GitHub Repository Intelligence (`GithubMentor`)**
    - Connect and inspect repositories (default: `manthankro/pramanix-ai-`).
-   - Deep architectural inspection: dependencies, entry point flow, containerization, and static AST verification.
+   - Deep architectural inspection: AST analysis, dependencies, containerization, and security verification.
    - 1-Click repository archive / ZIP downloader.
-   - File tree explorer with live code inspection.
+   - Interactive file tree explorer with live code viewer.
    - Codebase-grounded external examiner oral viva questions.
 
 2. **Capstone Project Builder (`ProjectBuilder`)**
    - Step-by-step engineering wizard across 6 domains (Distributed Systems, IoT, Cloud & DevOps, Robotics, Cybersecurity, Edge AI).
-   - Automated Software Requirements Specification (SRS) generation.
-   - Milestone breakdown (M1: Architecture, M2: Subsystems, M3: Integration, M4: Viva Defense).
+   - Automated Software Requirements Specification (SRS) generation with functional requirements.
+   - 8-Week milestone roadmaps (M1: Architecture, M2: Subsystems, M3: Integration, M4: Viva Defense).
    - 1-Click deployment directly into the active Project Workspace.
 
 3. **Project Workspace & Management (`ProjectWorkspace`)**
-   - **Tasks & Milestones:** Interactive status toggles (`todo`, `in_progress`, `done`), priority indicators, milestone tagging, and completion tracking.
-   - **Gantt Delivery Roadmap:** Milestone timelines and delivery schedules.
-   - **Code & File Management:** In-app syntax code viewer & editor (`main.py`, `Dockerfile`, `SRS.md`, `README.md`).
+   - **Kanban Roadmap:** Interactive status progression (`todo` ➔ `in_progress` ➔ `done`), priority indicators, milestone tagging, and completion tracking.
+   - **Gantt Delivery Roadmap:** Visual milestone schedules and delivery deadlines.
+   - **Code & File Management:** In-app syntax code viewer & editor (`main.py`, `Dockerfile`, `SRS.md`, `README.md`) with in-app saving.
    - **Engineering Notes & SRS Scratchpad:** Persistent architectural notes and design documentation.
 
 4. **Engineering Core Tutor (`EngineeringTutor`)**
@@ -58,12 +81,25 @@
 
 ---
 
-## 🛠️ Android Architecture & Technology Stack
+## 🚀 Running the Platforms
 
+### 🌐 1. Web Studio Platform
+```bash
+# Start development server
+npm run dev
+
+# Build for production
+npm run build
+```
+Listening on `http://0.0.0.0:3000`.
+
+### 📱 2. Android Native Application
+Open the repository in Android Studio or compile via Gradle:
+```bash
+gradle :app:assembleDebug
+```
+Output APK generated at `app/build/outputs/apk/debug/app-debug.apk`.
 - **Target OS / SDK:** Android 14+ (minSdk 26, targetSdk 36, compileSdk 36)
 - **UI Framework:** Jetpack Compose with Material Design 3 (M3)
-- **Design Pattern:** MVVM (Model-View-ViewModel) with unidirectional data flow and Kotlin Coroutines / StateFlow
-- **Theme:** High-tech dark mode engineering palette (`PrimaryIndigo`, `AccentCyan`, `AccentEmerald`)
 - **Package:** `com.aistudio.pramanix`
 - **Application ID:** `com.aistudio.pramanix.workspace`
-- **Build System:** Gradle Kotlin DSL (`build.gradle.kts`, `libs.versions.toml`)
