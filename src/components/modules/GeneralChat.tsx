@@ -36,7 +36,15 @@ What engineering challenge are we tackling today?`,
   ]);
 
   const [input, setInput] = useState("");
+  const [provider, setProvider] = useState<"groq" | "gemini" | "claude" | "openai" | "grok">("groq");
   const [loading, setLoading] = useState(false);
+  const providerOptions = [
+    { id: "groq", name: "Groq", model: "GROQ_MODEL", hint: "Fast · Uses your existing Groq key" },
+    { id: "gemini", name: "Gemini", model: "GEMINI_MODEL", hint: "Google · Requires a Gemini API key" },
+    { id: "claude", name: "Claude", model: "CLAUDE_MODEL", hint: "Anthropic · Requires an Anthropic API key" },
+    { id: "grok", name: "Grok", model: "XAI_MODEL", hint: "xAI · Requires an xAI API key" },
+    { id: "openai", name: "ChatGPT", model: "OPENAI_MODEL", hint: "OpenAI · Requires an OpenAI API key" },
+  ] as const;
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -71,7 +79,8 @@ What engineering challenge are we tackling today?`,
       const reply = await sendChatMessage(
         nextMessages.map((m) => ({ role: m.role, content: m.content })),
         workspaceContext,
-        "general"
+        "general",
+        provider
       );
 
       const assistantMsg: ChatMessage = {
@@ -200,6 +209,26 @@ What engineering challenge are we tackling today?`,
       {/* Input area & prompt suggestions */}
       <div className="p-4 bg-zinc-900/60 border-t border-zinc-800 shrink-0">
         <div className="max-w-4xl mx-auto space-y-2.5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <label className="flex items-center gap-2 text-xs text-zinc-300">
+              <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+              <span>AI model</span>
+              <select
+                value={provider}
+                onChange={(event) => setProvider(event.target.value as typeof provider)}
+                disabled={loading}
+                className="rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-xs text-zinc-100 outline-none focus:border-emerald-500 disabled:opacity-60"
+                aria-label="Choose AI model provider"
+              >
+                {providerOptions.map((option) => (
+                  <option key={option.id} value={option.id}>{option.name}</option>
+                ))}
+              </select>
+            </label>
+            <span className="text-[11px] text-zinc-400">
+              {providerOptions.find((option) => option.id === provider)?.hint}
+            </span>
+          </div>
           {messages.length <= 2 && (
             <div className="flex flex-wrap gap-1.5 pb-1">
               {promptSuggestions.map((s, i) => (
