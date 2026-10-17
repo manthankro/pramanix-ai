@@ -30,7 +30,8 @@ app.use(express.json({ limit: "25mb" }));
 /* -------------------------------------------------------------------------- */
 
 const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.8-flash";
-const GROQ_MODEL = process.env.GROQ_MODEL || "openai/gpt-oss-120b";
+const GROQ_API_KEY = process.env.GROQ_API_KEY || (process.env.GROQ_MODEL?.startsWith("gsk_") ? process.env.GROQ_MODEL : "");
+const GROQ_MODEL = (process.env.GROQ_MODEL && !process.env.GROQ_MODEL.startsWith("gsk_")) ? process.env.GROQ_MODEL : "openai/gpt-oss-120b";
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 const DEFAULT_REPO = process.env.DEFAULT_REPO || "manthankro/pramanix-ai-";
 const AI_RATE_LIMIT_PER_MIN = parseInt(process.env.RATE_LIMIT_PER_MIN || "60", 10);
@@ -150,12 +151,13 @@ async function callGemini(prompt: string, systemInstruction?: string, temperatur
 }
 
 async function callGroq(prompt: string, systemInstruction: string, temperature: number) {
-  if (!process.env.GROQ_API_KEY) throw new Error("GROQ_API_KEY is not configured in Netlify environment variables.");
+  if (!GROQ_API_KEY) throw new Error("GROQ_API_KEY is not configured.");
   const r = await fetch(GROQ_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
+      "User-Agent": "Pramanix/1.0",
+      Authorization: `Bearer ${GROQ_API_KEY}`,
     },
     body: JSON.stringify({
       model: GROQ_MODEL,
@@ -242,7 +244,7 @@ async function callLLM(
   if (provider === "openai") return callOpenAICompatible("openai", prompt, system, temperature);
   if (provider === "grok") return callOpenAICompatible("xai", prompt, system, temperature);
 
-  const hasGroq = !!process.env.GROQ_API_KEY;
+  const hasGroq = !!GROQ_API_KEY;
   const hasGemini = !!process.env.GEMINI_API_KEY;
   if (!hasGroq && !hasGemini) {
     throw new Error("No AI provider configured. Set GROQ_API_KEY and/or GEMINI_API_KEY.");
@@ -271,8 +273,8 @@ app.get("/api/health", (_req, res) => {
     ok: true,
     uptimeSeconds: Math.round(process.uptime()),
     llm: {
-      primary: process.env.GROQ_API_KEY ? `groq:${GROQ_MODEL}` : process.env.GEMINI_API_KEY ? `gemini:${GEMINI_MODEL}` : "none",
-      fallback: process.env.GROQ_API_KEY && process.env.GEMINI_API_KEY ? `gemini:${GEMINI_MODEL}` : "none",
+      primary: GROQ_API_KEY ? `groq:${GROQ_MODEL}` : process.env.GEMINI_API_KEY ? `gemini:${GEMINI_MODEL}` : "none",
+      fallback: GROQ_API_KEY && process.env.GEMINI_API_KEY ? `gemini:${GEMINI_MODEL}` : "none",
     },
     github: { tokenConfigured: !!process.env.GITHUB_TOKEN },
   });
