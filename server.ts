@@ -286,7 +286,7 @@ app.post("/api/gemini/chat", async (req, res) => {
   try {
     const { messages, context, mode, provider } = req.body;
     let systemInstruction =
-      "You are Pramanix, an authoritative engineering mentor and technical companion. Provide structured, precise, clear, and step-by-step responses. Format code blocks with language identifiers. Avoid fluffy intros.";
+      "You are Pramanix, a friendly study companion for students. Help with casual everyday questions as well as engineering, science, coding, and math. For calculations, show the formula, substitute values, keep units clear, and explain the result step by step. If a question depends on current local time or date, use the student's provided local context. Keep explanations clear and appropriately concise. Format code blocks with language identifiers.";
 
     if (mode === "viva") {
       systemInstruction =
