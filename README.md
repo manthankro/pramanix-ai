@@ -265,7 +265,7 @@ Copy `.env.example` to `.env`:
 | `GEMINI_API_KEY` | Optional | Gemini API key. Fallback when Groq fails or is rate limited. |
 | `GEMINI_MODEL` | No | Gemini model ID (default `gemini-3.8-flash`). |
 | `ANTHROPIC_API_KEY` | Optional | Enables Claude in the chat model picker. |
-| `CLAUDE_MODEL` | No | Claude model ID (default `claude-sonnet-4-20250514`). |
+| `CLAUDE_MODEL` | No | Claude model ID (default `claude-sonnet-4-6`). |
 | `OPENAI_API_KEY` | Optional | Enables ChatGPT in the chat model picker. |
 | `OPENAI_MODEL` | No | OpenAI model ID (default `gpt-4.1-mini`). |
 | `XAI_API_KEY` | Optional | Enables Grok in the chat model picker. |
