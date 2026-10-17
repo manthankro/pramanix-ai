@@ -23,7 +23,7 @@ const welcomeMessage = (): ChatMessage => ({
 });
 
 const providerOptions = [
-  { id: "groq", label: "Groq", detail: "Fast · your current provider" },
+  { id: "groq", label: "Groq", detail: "Fast · requires GROQ_API_KEY in Netlify" },
   { id: "gemini", label: "Gemini", detail: "Requires a Gemini API key" },
   { id: "claude", label: "Claude", detail: "Requires an Anthropic API key" },
   { id: "grok", label: "Grok", detail: "Requires an xAI API key" },
