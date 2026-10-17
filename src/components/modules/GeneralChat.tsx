@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Clock3, MessageCircle, Plus, Send, Sparkles, Trash2 } from "lucide-react";
+import { Clock3, MessageCircle, Plus, Send, Sparkles } from "lucide-react";
 import { ChatMessage, WorkspaceProject } from "../../types";
 import { sendChatMessage } from "../../services/api";
 import { MarkdownView } from "../common/MarkdownView";
@@ -48,12 +48,13 @@ const initialChats = (): SavedChat[] => {
 
 export const GeneralChat: React.FC<GeneralChatProps> = ({ currentProject }) => {
   const [sessions, setSessions] = useState<SavedChat[]>(initialChats);
-  const [activeChatId, setActiveChatId] = useState(() => initialChats()[0]?.id || "");
+  const [activeChatId, setActiveChatId] = useState("");
+  const selectedChatId = sessions.some((chat) => chat.id === activeChatId) ? activeChatId : sessions[0]?.id || "";
   const [input, setInput] = useState("");
   const [provider, setProvider] = useState<"groq" | "gemini" | "claude" | "openai" | "grok">("groq");
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const activeChat = sessions.find((chat) => chat.id === activeChatId) || sessions[0];
+  const activeChat = sessions.find((chat) => chat.id === selectedChatId) || sessions[0];
   const messages = activeChat?.messages || [welcomeMessage()];
 
   useEffect(() => {
@@ -71,7 +72,7 @@ export const GeneralChat: React.FC<GeneralChatProps> = ({ currentProject }) => {
   const saveMessages = (nextMessages: ChatMessage[]) => {
     setSessions((previous) =>
       previous.map((chat) => {
-        if (chat.id !== activeChatId) return chat;
+        if (chat.id !== selectedChatId) return chat;
         const firstQuestion = nextMessages.find((message) => message.role === "user")?.content;
         return {
           ...chat,
@@ -165,7 +166,7 @@ export const GeneralChat: React.FC<GeneralChatProps> = ({ currentProject }) => {
             <button
               key={chat.id}
               onClick={() => setActiveChatId(chat.id)}
-              className={`w-full flex items-start gap-2 rounded-lg px-3 py-2.5 text-left text-xs transition ${activeChatId === chat.id ? "bg-zinc-800 text-white" : "text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200"}`}
+              className={`w-full flex items-start gap-2 rounded-lg px-3 py-2.5 text-left text-xs transition ${selectedChatId === chat.id ? "bg-zinc-800 text-white" : "text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200"}`}
             >
               <MessageCircle className="w-3.5 h-3.5 mt-0.5 shrink-0 text-emerald-400" />
               <span className="line-clamp-2">{chat.title}</span>
@@ -179,9 +180,17 @@ export const GeneralChat: React.FC<GeneralChatProps> = ({ currentProject }) => {
 
       <section className="min-w-0 flex-1 flex flex-col">
         <div className="px-5 py-4 border-b border-zinc-800 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="text-base font-semibold">Ask Pramanix anything</h2>
-            <p className="mt-1 text-xs text-zinc-400">Study help, everyday questions, calculations, and coding support.</p>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={startNewChat}
+              className="md:hidden inline-flex items-center gap-1 rounded-lg border border-zinc-700 px-2.5 py-2 text-xs text-zinc-300"
+            >
+              <Plus className="h-3.5 w-3.5" /> New
+            </button>
+            <div>
+              <h2 className="text-base font-semibold">Ask Pramanix anything</h2>
+              <p className="mt-1 text-xs text-zinc-400">Study help, everyday questions, calculations, and coding support.</p>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <label className="text-xs text-zinc-400" htmlFor="chat-provider">Model</label>
