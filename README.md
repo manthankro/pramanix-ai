@@ -15,7 +15,7 @@
 
 **Pramanix AI** is a comprehensive engineering mentor, GitHub repository analyzer, viva simulator, and technical capstone project workspace. Designed for engineering students, computer science researchers, and developers, Pramanix bridges the gap between theoretical computer science coursework and production-ready software engineering.
 
-AI responses use **Groq** by default. Gemini can be configured as an optional fallback.
+The study chat supports everyday questions and step-by-step calculations. Groq is the default AI provider, and Gemini, Claude, Grok, or ChatGPT can be selected when their server-side API keys are configured.
 
 ---
 
@@ -36,7 +36,8 @@ AI responses use **Groq** by default. Gemini can be configured as an optional fa
 ## Key Features
 
 ### 1. GitHub Mentor & Repository Hub
-- **Repository Search & Metadata**: Search public GitHub repositories by keyword, owner, or repo slug (`manthankro/pramanix-ai-`).
+- **Topic Search for Students**: Search public repositories by topic (for example, machine learning or weather app) or by repository name.
+- **Student-Friendly Repository Guide**: Selecting a repository explains what it does, how its main parts work, where to start reading, and safe next steps grounded in its README and file list.
 - **Deep Architecture Inspection**: Auto-inspects repository file trees, READMEs, Docker configurations, and dependency manifests (`pyproject.toml`, `package.json`, `requirements.txt`).
 - **Visual Repository Insights (Recharts)**:
   - **Commit Frequency & Activity**: Weekly commit velocity and sprint cadence.
@@ -90,7 +91,8 @@ AI responses use **Groq** by default. Gemini can be configured as an optional fa
 
 ### 8. Coding Assistant & Complexity Auditor
 - **Big-O Analysis**: Time and space complexity breakdown for arbitrary algorithms.
-- **AST Debugger**: Root cause analysis for syntax errors, logical bugs, and race conditions.
+- **Upload a Code File**: Load supported plain-text source files directly into the reviewer.
+- **Code Review & Debugging**: Explain likely bugs, complexity, and improvements in student-friendly terms.
 - **Unit Test Generator**: Generates comprehensive unit and edge-case test suites (pytest, Jest, JUnit).
 - **DSA Practice Bank**: LeetCode and competitive programming problem explanations.
 
