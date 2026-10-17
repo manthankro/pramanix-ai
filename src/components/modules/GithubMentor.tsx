@@ -132,7 +132,12 @@ export const GithubMentor: React.FC<GithubMentorProps> = ({ onConnectRepoToWorks
       });
       setAuditReport(report);
     } catch (err: any) {
-      setAuditReport(`Audit failed: ${err.message}`);
+      const message = String(err?.message || "Unknown error");
+      setAuditReport(
+        message.toLowerCase().includes("no ai provider configured")
+          ? "AI summary is not connected yet. In Netlify, add GROQ_API_KEY under Site configuration → Environment variables, make sure its scope includes Functions, then redeploy the site."
+          : `Could not create the student guide: ${message}`
+      );
     } finally {
       setAnalyzing(false);
     }
