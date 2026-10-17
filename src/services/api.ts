@@ -3,12 +3,13 @@ import { RepoData } from "../types";
 export async function sendChatMessage(
   messages: Array<{ role: string; content: string }>,
   context?: string,
-  mode: "general" | "viva" | "doubt" | "research" = "general"
+  mode: "general" | "viva" | "doubt" | "research" = "general",
+  provider?: "groq" | "gemini" | "claude" | "openai" | "grok"
 ): Promise<string> {
   const res = await fetch("/api/gemini/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ messages, context, mode }),
+    body: JSON.stringify({ messages, context, mode, provider }),
   });
 
   if (!res.ok) {
