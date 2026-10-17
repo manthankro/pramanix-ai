@@ -10,6 +10,7 @@ import {
   Terminal,
   BookOpen,
   HelpCircle,
+  Upload,
 } from "lucide-react";
 import { analyzeTask } from "../../services/api";
 import { MarkdownView } from "../common/MarkdownView";
@@ -35,6 +36,7 @@ print(find_duplicates([1, 2, 3, 2, 4, 1]))`
   const [errorLog, setErrorLog] = useState("IndexError: list index out of range at line 6");
   const [reviewLoading, setReviewLoading] = useState(false);
   const [reviewResult, setReviewResult] = useState("");
+  const [uploadedFileName, setUploadedFileName] = useState("");
 
   // Interview Bank State
   const [selectedProblemIdx, setSelectedProblemIdx] = useState(0);
@@ -151,6 +153,27 @@ Example: s = "abcabcbb" -> Answer = 3 ("abc").`,
     },
   ];
 
+  const handleCodeFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      setCode(text.slice(0, 120000));
+      setUploadedFileName(file.name);
+      const extension = file.name.split(".").pop()?.toLowerCase();
+      const languageByExtension: Record<string, string> = {
+        py: "python", js: "javascript", jsx: "javascript", ts: "javascript", tsx: "javascript",
+        cpp: "cpp", cc: "cpp", c: "cpp", java: "java", rs: "rust", go: "go", sql: "sql",
+      };
+      if (extension && languageByExtension[extension]) setLanguage(languageByExtension[extension]);
+      setReviewResult("");
+    } catch {
+      setReviewResult("Could not read this file. Please choose a plain-text source file.");
+    } finally {
+      event.target.value = "";
+    }
+  };
+
   const handleReviewCode = async () => {
     if (!code.trim()) return;
     setReviewLoading(true);
@@ -224,7 +247,15 @@ Example: s = "abcabcbb" -> Answer = 3 ("abc").`,
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-xs text-zinc-300 font-medium font-mono">Source Code:</label>
+                  <div className="flex items-center justify-between gap-2">
+                    <label className="text-xs text-zinc-300 font-medium font-mono">Source Code:</label>
+                    <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-zinc-700 bg-zinc-900 px-2.5 py-1.5 text-[11px] text-zinc-300 hover:border-emerald-500/60 hover:text-white">
+                      <Upload className="h-3.5 w-3.5 text-emerald-400" />
+                      Upload code file
+                      <input type="file" accept=".py,.js,.jsx,.ts,.tsx,.cpp,.cc,.c,.java,.rs,.go,.sql,.txt" className="hidden" onChange={handleCodeFileUpload} />
+                    </label>
+                  </div>
+                  {uploadedFileName && <p className="text-[10px] text-zinc-500">Loaded {uploadedFileName} · files are read locally in your browser.</p>}
                   <textarea
                     rows={10}
                     value={code}
