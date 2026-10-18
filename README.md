@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="public/pramanix-logo.jpeg" alt="Pramanix Logo" width="180" style="border-radius: 18px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);" />
+  <img src="assets/pramanix-logo.jpg" alt="Pramanix logo" width="220" />
   <br />
   <h1>P R A M A N I X</h1>
   <p><b>Autonomous AI Engineering Mentor, Capstone Project Architect & Oral Viva Defense Studio</b></p>
@@ -11,7 +11,7 @@
     <img src="https://img.shields.io/badge/License-MIT-blue?style=for-the-badge" alt="License" />
   </p>
 
-  <p>Created by <b>Manthan</b> (<a href="https://github.com/manthankro">@manthankro</a>) • University Capstone & Engineering Workspace</p>
+  <p>Created by <b>Manthan</b> (<a href="https://github.com/manthankro">@manthankro</a>) • University Capstone & Engineering Workspace</p>\n  <p><b>Related repository:</b> <a href="https://github.com/manthankro/pramanix-ai-">pramanix-ai- — current project repository</a></p>
 </div>
 
 ---
